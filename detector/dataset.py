@@ -23,8 +23,8 @@ class Dataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         # load images and masks
-        img_path = self.imgs[idx] #RENDERS_PATH(self.object_name) / self.imgs[idx]
-        mask_path =  self.masks[idx] #MASKS_PATH(self.object_name) / self.masks[idx]
+        img_path = self.imgs[idx]
+        mask_path =  self.masks[idx]
         img = Image.open(img_path).convert("RGB")
         # note that we haven't converted the mask to RGB,
         # because each color corresponds to a different instance

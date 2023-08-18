@@ -124,10 +124,9 @@ def main(object_name):
             print(f"Model saved in epoch {epoch} to file: {MODEL_PATH(object_name)}/model.pkl, with loss: {min_eval_loss}")
 
     
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("object_name",type=str, nargs='?', default="rc-car")
+    parser.add_argument("object_name",type=str, nargs='?', default="scissors")
     args = parser.parse_args()
 
     main(args.object_name)

@@ -45,21 +45,25 @@ def main(object_name, image_path, min_score, best_result_path, result_path):
         box[2] = np.clip(box[2]+w, 0, img.shape[-1]-1)
         box[3] = np.clip(box[3]+h, 0, img.shape[-2]-1)
 
-    best_box = None
-    if len(scores >= 1) and np.max(scores) > min_score:
-        best_mask = masks[np.argmax(scores)][0]
-        best_box = boxes[np.argmax(scores)]
+    best_boxes = []
+    best_masks = []
+    for i, score in enumerate(scores):
+        if score >= min_score:
+            best_boxes.append(boxes[i])
+            best_masks.append(masks[i][0])
+    best_mask = np.sum(best_masks, axis=0)
 
     #### LOCAL SAVE ####
-    if np.any(best_box) != None:
-        best_mask = (best_mask*255).astype(np.uint8)
-        best_mask_filter = best_mask < 255*0
-        best_mask[best_mask_filter] = 0
-        best_mask = Image.fromarray(best_mask)
+
+    best_mask = (best_mask*255).astype(np.uint8)
+    best_mask_filter = best_mask < 255*0
+    best_mask[best_mask_filter] = 0
+    best_mask = Image.fromarray(best_mask)
+    for best_box in best_boxes:
         rect = ImageDraw.Draw(best_mask)
         rect.rectangle(best_box, fill = None, outline ="red")
-        best_mask.save(best_result_path)
-        print(f"Best mask saved to: {best_result_path}.")
+    best_mask.save(best_result_path)
+    print(f"Best mask saved to: {best_result_path}.")
     
     all_masks = np.sum(masks, axis=0)[0]
     all_masks = (all_masks*255).astype(np.uint8)
@@ -84,7 +88,7 @@ def main(object_name, image_path, min_score, best_result_path, result_path):
     plt.show()
     """
 
-    return best_box
+    return best_boxes
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -92,8 +96,8 @@ if __name__ == "__main__":
     parser.add_argument("min_score",type=float, nargs='?', default=0.8)
     args = parser.parse_args()
 
-    image_path = OBJECT_PATH(args.object_name) / "test3.png"
-    best_result_path = OBJECT_PATH(args.object_name) / "result_best_3.png"
-    result_path = OBJECT_PATH(args.object_name) / "result_3.png"
+    image_path = OBJECT_PATH(args.object_name) / "test4.png"
+    best_result_path = OBJECT_PATH(args.object_name) / "result_best_4.png"
+    result_path = OBJECT_PATH(args.object_name) / "result_4.png"
 
     main(args.object_name, image_path, args.min_score, best_result_path, result_path)
