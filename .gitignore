@@ -1,0 +1,6 @@
+backgrounds
+
+/objects/*/renders/*.png
+/objects/*/masks/*.png
+/objects/*/model
+/objects/*/*.png
