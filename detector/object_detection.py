@@ -64,14 +64,14 @@ def get_transform():
     transforms.append(T.ConvertImageDtype(torch.float))
     return T.Compose(transforms)
 
-def main(object_name):
+def main(object_names, model_folder):
     # train on the GPU or on the CPU, if a GPU is not available
     device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
     # our dataset has two classes only - background and object
-    num_classes = 2
+    num_classes = len(object_names) + 1
     # use our dataset and defined transformations
-    dataset = Dataset(object_name, get_transform())
-    dataset_test = Dataset(object_name, get_transform())
+    dataset = Dataset(object_names, get_transform())
+    dataset_test = Dataset(object_names, get_transform())
 
     # split the dataset in train and test set
     indices = torch.randperm(len(dataset)).tolist()
@@ -104,29 +104,31 @@ def main(object_name):
     # train it for 10 epochs
     num_epochs = 10
 
-    MODEL_PATH(object_name).mkdir(exist_ok=True)
-    with open(MODEL_PATH(object_name) / 'log.txt', 'w') as f:
+    MODEL_PATH(model_folder).mkdir(exist_ok=True)
+    with open(MODEL_PATH(model_folder) / 'log.txt', 'w') as f:
         f.write("This file contains losses for each epoch and validation.\n\n")
 
     min_eval_loss = math.inf
 
     for epoch in range(num_epochs):
         # train for one epoch, printing every 10 iterations
-        train_one_epoch(model, optimizer, data_loader, device, epoch, object_name, print_freq=10)
+        train_one_epoch(model, optimizer, data_loader, device, epoch, model_folder, print_freq=10)
         # update the learning rate
         lr_scheduler.step()
         # evaluate on the test dataset
-        eval_loss = evaluate(model, data_loader_test, object_name, device=device)
+        eval_loss = evaluate(model, data_loader_test, model_folder, device=device)
         if eval_loss < min_eval_loss:
             min_eval_loss = eval_loss
-            with open(MODEL_PATH(object_name) / "model.pkl", "wb") as f:
+            with open(MODEL_PATH(model_folder) / "model.pkl", "wb") as f:
                 torch.save(model, f)
-            print(f"Model saved in epoch {epoch} to file: {MODEL_PATH(object_name)}/model.pkl, with loss: {min_eval_loss}")
+            print(f"Model saved in epoch {epoch} to file: {MODEL_PATH(model_folder)}/model.pkl, with loss: {min_eval_loss}")
 
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("object_name",type=str, nargs='?', default="scissors")
+    parser.add_argument("object_names",type=str, nargs='?', default="scissors,pen")
+    parser.add_argument("model_folder",type=str, nargs='?', default="scissors_pen")
     args = parser.parse_args()
 
-    main(args.object_name)
+    object_names = args.object_names.split(",")
+    main(object_names, args.model_folder)

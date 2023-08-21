@@ -92,12 +92,12 @@ def main(object_name, image_path, min_score, best_result_path, result_path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("object_name",type=str, nargs='?', default="rc-car")
+    parser.add_argument("object_name",type=str, nargs='?', default="scissors_pen")
     parser.add_argument("min_score",type=float, nargs='?', default=0.8)
     args = parser.parse_args()
 
-    image_path = OBJECT_PATH(args.object_name) / "test4.png"
-    best_result_path = OBJECT_PATH(args.object_name) / "result_best_4.png"
-    result_path = OBJECT_PATH(args.object_name) / "result_4.png"
+    image_path = MODEL_PATH(args.object_name) / "test3.png"
+    best_result_path = MODEL_PATH(args.object_name) / "result_best_3.png"
+    result_path = MODEL_PATH(args.object_name) / "result_3.png"
 
     main(args.object_name, image_path, args.min_score, best_result_path, result_path)

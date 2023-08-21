@@ -9,40 +9,42 @@ from config import (
 )
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self, object_name, transforms, class_id=1):
-        self.object_name = object_name
+    def __init__(self, object_names, transforms):
+        self.object_names = object_names
         self.transforms = transforms
         # load all image files, sorting them to
         # ensure that they are aligned
-        #self.imgs = list(sorted(os.listdir(RENDERS_PATH(object_name))))
-        self.imgs = list(sorted(RENDERS_PATH(object_name).iterdir()))
-        #self.masks = list(sorted(os.listdir(MASKS_PATH(object_name))))
-        self.masks = list(sorted(MASKS_PATH(object_name).iterdir()))
-        assert class_id > 0
-        self.class_id = class_id
+        self.imgs = {}
+        self.masks = {}
+        for object_name in object_names:
+            self.imgs[object_name] = list(sorted(RENDERS_PATH(object_name).iterdir()))
+            self.masks[object_name] = list(sorted(MASKS_PATH(object_name).iterdir()))
 
     def __getitem__(self, idx):
         # load images and masks
-        img_path = self.imgs[idx]
-        mask_path =  self.masks[idx]
+        for object_name in self.imgs:
+            if idx < len(self.imgs[object_name]):
+                img_path = self.imgs[object_name][idx]
+                mask_path = self.masks[object_name][idx]
+                curr_obj_name = object_name
+                break
+            else:
+                idx = idx - len(self.imgs[object_name])
+
         img = Image.open(img_path).convert("RGB")
+        img = np.array(img)
         # note that we haven't converted the mask to RGB,
         # because each color corresponds to a different instance
         # with 0 being background
         mask = Image.open(mask_path)
         # convert the PIL Image into a numpy array
         mask = np.array(mask)
-        # instances are encoded as different colors
-        obj_ids = np.unique(mask)
-        # first id is the background, so remove it
-        obj_ids = obj_ids[1:]
 
-        # split the color-encoded mask into a set
-        # of binary masks
-        masks = mask == obj_ids[:, None, None]
+        if self.transforms is not None:
+            img, masks, labels = self.transforms(img, mask, self.object_names, curr_obj_name)
 
         # get bounding box coordinates for each mask
-        num_objs = len(obj_ids)
+        num_objs = len(labels)
         boxes = []
         for i in range(num_objs):
             pos = np.nonzero(masks[i])
@@ -52,10 +54,12 @@ class Dataset(torch.utils.data.Dataset):
             ymax = np.max(pos[0])
             boxes.append([xmin, ymin, xmax, ymax])
 
+            labels[i] = self.object_names.index(labels[i])+1
+
         # convert everything into a torch.Tensor
         boxes = torch.as_tensor(boxes, dtype=torch.float32)
         # there is only one class
-        labels = torch.ones((num_objs,), dtype=torch.int64) * self.class_id
+        labels = torch.as_tensor(labels, dtype=torch.int64)
         masks = torch.as_tensor(masks, dtype=torch.uint8)
 
         image_id = torch.tensor([idx])
@@ -71,11 +75,8 @@ class Dataset(torch.utils.data.Dataset):
         target["area"] = area
         target["iscrowd"] = iscrowd
 
-        if self.transforms is not None:
-            img, target = self.transforms(img, target, self.object_name)
-
         return img, target
 
     def __len__(self):
-        return len(self.imgs)
+        return len([item for sublist in list(self.imgs.values()) for item in sublist])
     

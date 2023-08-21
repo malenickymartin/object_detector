@@ -77,7 +77,7 @@ def make_output_visualization(object_name: Path, args) -> None:
             
             if np.sum(renderings.binary_mask)/np.prod(camera.resolution) <= args.object_image_ratio:
                 logger.info(f"Image number {render_num} not saved! Object took only {np.sum(renderings.binary_mask)/np.prod(camera.resolution)*100} % of frame.")
-                assert attempt < 9, "Object was not visible (or was too small) on 10 renders in row. Consider changing constants in data_generator.py"
+                assert attempt < 9, "Object was not visible (or was too small) on 10 renders in row. Consider changing distance from camera range in data_generator.py"
                 continue
 
             render = Image.fromarray(renderings.rgb, "RGB")

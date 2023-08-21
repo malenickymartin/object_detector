@@ -13,7 +13,7 @@ from detector import utils
 from detector.coco_eval import CocoEvaluator
 from detector.coco_utils import get_coco_api_from_dataset
 
-def train_one_epoch(model, optimizer, data_loader, device, epoch, object_name, print_freq, scaler=None):
+def train_one_epoch(model, optimizer, data_loader, device, epoch, model_folder, print_freq, scaler=None):
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter("lr", utils.SmoothedValue(window_size=1, fmt="{value:.6f}"))
@@ -63,7 +63,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, object_name, p
         metric_logger.update(loss=losses_reduced, **loss_dict_reduced)
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
 
-    with open(MODEL_PATH(object_name) / "log.txt", "a") as f:
+    with open(MODEL_PATH(model_folder) / "log.txt", "a") as f:
         f.write("Epoch: " + str(epoch) + '\n')
         f.write(str(np.mean(log)) + '\n')
 
@@ -83,7 +83,7 @@ def _get_iou_types(model):
 
 
 @torch.inference_mode()
-def evaluate(model, data_loader, object_name, device):
+def evaluate(model, data_loader, model_folder, device):
     n_threads = torch.get_num_threads()
     # FIXME remove this and make paste_masks_in_image run on the GPU
     torch.set_num_threads(1)
@@ -132,7 +132,7 @@ def evaluate(model, data_loader, object_name, device):
         evaluator_time = time.time() - evaluator_time
         metric_logger.update(model_time=model_time, evaluator_time=evaluator_time)
     
-    with open(MODEL_PATH(object_name) / "log.txt", "a") as f:
+    with open(MODEL_PATH(model_folder) / "log.txt", "a") as f:
         f.write(str(np.mean(log)) + '\n')
 
     # gather the stats from all processes
