@@ -56,9 +56,9 @@ def get_model_instance_segmentation(num_classes):
                                                        num_classes)
     return model
 
-def get_transform():
+def get_transform(object_names):
     transforms = []
-    transforms.append(T.AddRenders())
+    transforms.append(T.AddRenders(object_names))
     transforms.append(T.AddBackground())
     transforms.append(T.PILToTensor())
     transforms.append(T.ConvertImageDtype(torch.float))
@@ -66,24 +66,24 @@ def get_transform():
 
 def main(object_names, model_folder):
     # train on the GPU or on the CPU, if a GPU is not available
-    device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     # our dataset has two classes only - background and object
     num_classes = len(object_names) + 1
     # use our dataset and defined transformations
-    dataset = Dataset(object_names, get_transform())
-    dataset_test = Dataset(object_names, get_transform())
+    dataset = Dataset(object_names, get_transform(object_names))
+    dataset_test = Dataset(object_names, get_transform(object_names))
 
     # split the dataset in train and test set
     indices = torch.randperm(len(dataset)).tolist()
     dataset = torch.utils.data.Subset(dataset, indices[:math.floor(TRAIN_TO_TEST_RATIO*len(indices))])
-    dataset_test = torch.utils.data.Subset(dataset_test, indices[-math.ceil((1-TRAIN_TO_TEST_RATIO)*len(indices)):])
+    dataset_test = torch.utils.data.Subset(dataset_test, indices[-math.ceil((1-TRAIN_TO_TEST_RATIO)*len(indices))+1:])
     # define training and validation data loaders
     data_loader = torch.utils.data.DataLoader(
-        dataset, batch_size=16, shuffle=True, num_workers=7,
+        dataset, batch_size=16, shuffle=True, num_workers=8,
         collate_fn=utils.collate_fn)
     
     data_loader_test = torch.utils.data.DataLoader(
-        dataset_test, batch_size=4, shuffle=False, num_workers=4,
+        dataset_test, batch_size=16, shuffle=False, num_workers=8,
         collate_fn=utils.collate_fn)
 
     # get the model using our helper function
@@ -106,7 +106,7 @@ def main(object_names, model_folder):
 
     MODEL_PATH(model_folder).mkdir(exist_ok=True)
     with open(MODEL_PATH(model_folder) / 'log.txt', 'w') as f:
-        f.write("This file contains losses for each epoch and validation.\n\n")
+        f.write("This file contains losses for each epoch training and validation.\n\n")
 
     min_eval_loss = math.inf
 
@@ -126,8 +126,8 @@ def main(object_names, model_folder):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("object_names",type=str, nargs='?', default="scissors,pen")
-    parser.add_argument("model_folder",type=str, nargs='?', default="scissors_pen")
+    parser.add_argument("object_names",type=str, nargs='?', default="pen")
+    parser.add_argument("model_folder",type=str, nargs='?', default="pen")
     args = parser.parse_args()
 
     object_names = args.object_names.split(",")

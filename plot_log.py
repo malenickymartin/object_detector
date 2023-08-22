@@ -5,7 +5,7 @@ from config import (
 import numpy as np
 from matplotlib import pyplot as plt
 
-object_name = "rc-car"
+object_name = "scissors_pen_drill"
 
 with open(MODEL_PATH(object_name) / "log.txt", "r") as f:
     log = f.readlines()

@@ -5,27 +5,27 @@ from PIL import Image
 from config import (
     RENDERS_PATH,
     MASKS_PATH,
-    OBJECT_PATH
+    MODEL_PATH
 )
 
-def get_transform():
+def get_transform(object_name):
     transforms = []
-    transforms.append(T.AddRenders())
+    transforms.append(T.AddRenders(object_name))
     transforms.append(T.AddBackground())
     return T.Compose(transforms)
 
-transforms = get_transform()
-object_name = "rc-car"
+object_name = "scissors"
+model_folder = "scissors_pen_drill"
 
+transforms = get_transform(object_name)
 images_list = os.listdir(RENDERS_PATH(object_name))
 image_num = np.random.randint(0, len(images_list))
 print(f"Image number {image_num}")
-img = Image.open(RENDERS_PATH(object_name) / f"render{image_num}.png").convert("RGB")
-target = {"masks" : np.array(Image.open(MASKS_PATH(object_name) / f"mask{image_num}.png"))}
-target["masks"] = np.transpose(target["masks"][:,:,None], (2,0,1))
+img = np.array(Image.open(RENDERS_PATH(object_name) / f"render{image_num}.png").convert("RGB"))
+mask = np.array(Image.open(MASKS_PATH(object_name) / f"mask{image_num}.png"))
 
-img, target = transforms(img, target, object_name)
+img, _, _ = transforms(img, mask, object_name)
 
-img.save(OBJECT_PATH(object_name) / "test1.png")
+img.save(MODEL_PATH(model_folder) / "test1.png")
 
 

@@ -1,7 +1,7 @@
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List
 
 import torch
-from torch import nn, Tensor
+from torch import nn
 from torchvision.transforms import functional as F, transforms as T
 import os
 import numpy as np
@@ -24,34 +24,60 @@ class Compose:
         return args
     
 class AddRenders(nn.Module):
-    def forward(self, render, mask, object_names, curr_obj_name):
+    def __init__(self, object_names, max_data_objs = 5, max_other_objs = 5):
+        super().__init__()
+        self.max_data_objs = max_data_objs
+        self.max_other_objs = max_other_objs
+        self.object_names = object_names
+
+        objects_dir = os.listdir(OBJECTS_PATH)
+        self.other_objects = []
+        self.data_objects = []
+        for object in objects_dir:
+            if RENDERS_PATH(object).is_dir():
+                if object in object_names:
+                    self.data_objects.append({"label": object,
+                                              "renders":list(sorted(RENDERS_PATH(object).iterdir())),
+                                              "masks":list(sorted(MASKS_PATH(object).iterdir()))})
+                    assert len(self.data_objects[-1]["renders"]) == len(self.data_objects[-1]["masks"])
+                else:
+                    self.other_objects.append({"label": object,
+                                               "renders":list(sorted(RENDERS_PATH(object).iterdir())),
+                                               "masks":list(sorted(MASKS_PATH(object).iterdir()))})
+                    assert len(self.other_objects[-1]["renders"]) == len(self.other_objects[-1]["masks"])
+
+    def forward(self, render, mask, curr_obj_name):
         mask = mask > 0
         all_masks = mask[:,:,None]
         masks = mask[None, :, :]
         only_object_mask = mask > 0
         labels = [curr_obj_name]
-        
-        objects_dir = os.listdir(OBJECTS_PATH)
-        objects = []
-        for object in objects_dir:
-            if os.path.isdir(RENDERS_PATH(object)) and object != curr_obj_name:
-                objects.append({"label": object,"num_renders":len(os.listdir(RENDERS_PATH(object)))})
 
-        for object in np.random.choice(objects, np.random.randint(0, len(objects)+1), replace=False):
-            render_num = np.random.randint(0, object["num_renders"])
-            new_render = np.array(Image.open(RENDERS_PATH(object["label"]) / f"render{render_num}.png"))
-            new_mask = np.array(Image.open(MASKS_PATH(object["label"]) / f"mask{render_num}.png"))
+        data_objects = []
+        for object in self.data_objects:
+            if object["label"] != curr_obj_name:
+                data_objects.append(object)
+        
+        rand_data_objs = np.random.randint(0, min(self.max_data_objs, len(data_objects)) + 1) 
+        rand_other_objs = np.random.randint(0, min(self.max_other_objs, len(self.other_objects)) + 1)
+        rand_data_objs = np.random.choice(data_objects, rand_data_objs, replace=False)
+        rand_other_objs = np.random.choice(self.other_objects, rand_other_objs, replace=False)
+
+        for object in np.concatenate((rand_data_objs, rand_other_objs)):
+            render_num = np.random.randint(0, len(object["renders"]))
+            new_render = np.array(Image.open(object["renders"][render_num]))
+            new_mask = np.array(Image.open(object["masks"][render_num]))
             new_mask = new_mask > 0
             ovelay_rate = np.sum(np.logical_and(only_object_mask, new_mask))/np.sum(only_object_mask)
 
-            if object["label"] in object_names:
+            if object["label"] in self.object_names:
                 masks = np.append(masks, new_mask[None,:,:], axis=0)
                 labels.append(object["label"])
                 only_object_mask = np.logical_or(only_object_mask, new_mask)
 
             new_mask = new_mask[:,:,None]
 
-            if np.random.choice([True, False]) and ovelay_rate < 0.75:
+            if np.random.random() < 0.5 and ovelay_rate < 0.75:
                 render = np.where(new_mask, new_render, render)
             else:
                 render = np.where(all_masks, render, new_render)

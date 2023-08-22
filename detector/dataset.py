@@ -14,22 +14,22 @@ class Dataset(torch.utils.data.Dataset):
         self.transforms = transforms
         # load all image files, sorting them to
         # ensure that they are aligned
-        self.imgs = {}
-        self.masks = {}
+        self.imgs = []
+        self.masks = []
+        self.labels = []
         for object_name in object_names:
-            self.imgs[object_name] = list(sorted(RENDERS_PATH(object_name).iterdir()))
-            self.masks[object_name] = list(sorted(MASKS_PATH(object_name).iterdir()))
+            imgs = list(sorted(RENDERS_PATH(object_name).iterdir()))
+            masks = list(sorted(MASKS_PATH(object_name).iterdir()))
+            assert len(imgs) == len(masks)
+            self.imgs += imgs
+            self.masks += masks
+            self.labels += [object_name for _ in range(len(imgs))]
 
     def __getitem__(self, idx):
         # load images and masks
-        for object_name in self.imgs:
-            if idx < len(self.imgs[object_name]):
-                img_path = self.imgs[object_name][idx]
-                mask_path = self.masks[object_name][idx]
-                curr_obj_name = object_name
-                break
-            else:
-                idx = idx - len(self.imgs[object_name])
+        img_path = self.imgs[idx]
+        mask_path = self.masks[idx]
+        curr_obj_name = self.labels[idx]
 
         img = Image.open(img_path).convert("RGB")
         img = np.array(img)
@@ -41,7 +41,7 @@ class Dataset(torch.utils.data.Dataset):
         mask = np.array(mask)
 
         if self.transforms is not None:
-            img, masks, labels = self.transforms(img, mask, self.object_names, curr_obj_name)
+            img, masks, labels = self.transforms(img, mask, curr_obj_name)
 
         # get bounding box coordinates for each mask
         num_objs = len(labels)
@@ -78,5 +78,6 @@ class Dataset(torch.utils.data.Dataset):
         return img, target
 
     def __len__(self):
-        return len([item for sublist in list(self.imgs.values()) for item in sublist])
+        return len(self.imgs)
+
     

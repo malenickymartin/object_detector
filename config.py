@@ -6,17 +6,17 @@ OBJECTS_PATH = PROJECT_PATH / "objects"
 BACKGROUNDS_PATH = PROJECT_PATH / "backgrounds"
 MODELS_PATH = PROJECT_PATH / "models"
 
-def OBJECT_PATH(object_name):
+def OBJECT_PATH(object_name : str) -> Path:
     return OBJECTS_PATH / object_name
 
-def MODEL_PATH(model_folder):
+def MODEL_PATH(model_folder : str) -> Path:
     return MODELS_PATH / model_folder
 
-def RENDERS_PATH(object_name):
+def RENDERS_PATH(object_name : str) -> Path:
     return OBJECT_PATH(object_name) / "renders"
 
-def MASKS_PATH(object_name):
+def MASKS_PATH(object_name : str) -> Path:
     return OBJECT_PATH(object_name) / "masks"
 
-def MESH_PATH(object_name):
+def MESH_PATH(object_name : str) -> Path:
     return OBJECT_PATH(object_name) / "meshes"
