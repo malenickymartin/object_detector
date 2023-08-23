@@ -1,5 +1,6 @@
 import argparse
 import math
+import os
 
 from detector.engine import train_one_epoch, evaluate
 from detector import utils
@@ -7,7 +8,8 @@ from detector import transforms as T
 from detector.dataset import Dataset
 
 from config import (
-    MODEL_PATH
+    RESULT_PATH,
+    DATASET_PATH
 )
 
 import torch
@@ -56,20 +58,22 @@ def get_model_instance_segmentation(num_classes):
                                                        num_classes)
     return model
 
-def get_transform(object_names):
+def get_transform(object_names, aug_dataset):
     transforms = []
-    transforms.append(T.AddRenders(object_names))
+    transforms.append(T.AddRenders(object_names, aug_dataset))
     transforms.append(T.AddBackground())
     transforms.append(T.PILToTensor())
     transforms.append(T.ConvertImageDtype(torch.float))
     return T.Compose(transforms)
 
-def main(object_names, model_folder):
+def main(train_dataset, aug_dataset, model_folder):
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+
+    object_names = sorted(os.listdir(DATASET_PATH(train_dataset)))
     num_classes = len(object_names) + 1
     # use our dataset and defined transformations
-    dataset = Dataset(object_names, get_transform(object_names))
-    dataset_test = Dataset(object_names, get_transform(object_names))
+    dataset = Dataset(train_dataset, get_transform(train_dataset, aug_dataset))
+    dataset_test = Dataset(train_dataset, get_transform(train_dataset, aug_dataset))
 
     # split the dataset in train and test set
     indices = torch.randperm(len(dataset)).tolist()
@@ -102,8 +106,8 @@ def main(object_names, model_folder):
     # train it for 10 epochs
     num_epochs = 10
 
-    MODEL_PATH(model_folder).mkdir(exist_ok=True)
-    with open(MODEL_PATH(model_folder) / 'log.txt', 'w') as f:
+    RESULT_PATH(model_folder).mkdir(exist_ok=True)
+    with open(RESULT_PATH(model_folder) / 'log.txt', 'w') as f:
         f.write("This file contains losses for each epoch training and validation.\n\n")
 
     min_eval_loss = math.inf
@@ -117,16 +121,15 @@ def main(object_names, model_folder):
         eval_loss = evaluate(model, data_loader_test, model_folder, device=device)
         if eval_loss < min_eval_loss:
             min_eval_loss = eval_loss
-            with open(MODEL_PATH(model_folder) / "model.pkl", "wb") as f:
+            with open(RESULT_PATH(model_folder) / "model.pkl", "wb") as f:
                 torch.save(model, f)
-            print(f"Model saved in epoch {epoch} to file: {MODEL_PATH(model_folder)}/model.pkl, with loss: {min_eval_loss}")
+            print(f"Model saved in epoch {epoch} to file: {RESULT_PATH(model_folder)}/model.pkl, with loss: {min_eval_loss}")
 
-    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("object_names",type=str, nargs='?', default="mustard")
-    parser.add_argument("model_folder",type=str, nargs='?', default="mustard")
+    parser.add_argument("train_dataset",type=str, nargs='?', default="train")
+    parser.add_argument("aug_dataset",type=str, nargs='?', default="augs")
+    parser.add_argument("model_folder",type=str, nargs='?', default="rc-car_test")
     args = parser.parse_args()
 
-    object_names = args.object_names.split(",")
-    main(object_names, args.model_folder)
+    main(args.train_dataset, args.aug_dataset, args.model_folder)

@@ -2,21 +2,24 @@ import os
 from pathlib import Path
 
 PROJECT_PATH = Path(os.path.realpath(__file__)).parent
-OBJECTS_PATH = PROJECT_PATH / "objects"
+OBJECTS_PATH = PROJECT_PATH / "datasets"
 BACKGROUNDS_PATH = PROJECT_PATH / "backgrounds"
-MODELS_PATH = PROJECT_PATH / "results"
+RESULTS_PATH = PROJECT_PATH / "results"
 
-def OBJECT_PATH(object_name : str) -> Path:
-    return OBJECTS_PATH / object_name
+def DATASET_PATH(dataset_name : str) -> Path:
+    return OBJECTS_PATH / dataset_name
 
-def MODEL_PATH(model_folder : str) -> Path:
-    return MODELS_PATH / model_folder
+def RESULT_PATH(model_folder : str) -> Path:
+    return RESULTS_PATH / model_folder
 
-def RENDERS_PATH(object_name : str) -> Path:
-    return OBJECT_PATH(object_name) / "renders"
+def OBJECT_PATH(dataset_name : str, object_name : str) -> Path:
+    return DATASET_PATH(dataset_name) / object_name
 
-def MASKS_PATH(object_name : str) -> Path:
-    return OBJECT_PATH(object_name) / "masks"
+def RENDERS_PATH(dataset_name : str, object_name : str) -> Path:
+    return OBJECT_PATH(dataset_name, object_name) / "renders"
 
-def MESH_PATH(object_name : str) -> Path:
-    return OBJECT_PATH(object_name) / "meshes"
+def MASKS_PATH(dataset_name : str, object_name : str) -> Path:
+    return OBJECT_PATH(dataset_name, object_name) / "masks"
+
+def MESH_PATH(dataset_name : str, object_name : str) -> Path:
+    return OBJECT_PATH(dataset_name, object_name) / "meshes"

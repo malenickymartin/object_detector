@@ -5,26 +5,31 @@ from PIL import Image
 
 from config import (
     RENDERS_PATH,
-    MASKS_PATH
+    MASKS_PATH,
+    DATASET_PATH,
+    OBJECT_PATH
 )
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self, object_names, transforms):
-        self.object_names = object_names
+    def __init__(self, train_dataset, transforms):
+        self.object_names = sorted(os.listdir(DATASET_PATH(train_dataset)))
         self.transforms = transforms
         # load all image files, sorting them to
         # ensure that they are aligned
         self.imgs = []
         self.masks = []
         self.labels = []
-        for object_name in object_names:
-            imgs = list(sorted(RENDERS_PATH(object_name).iterdir()))
-            masks = list(sorted(MASKS_PATH(object_name).iterdir()))
-            assert len(imgs) == len(masks)
-            self.imgs += imgs
-            self.masks += masks
-            self.labels += [object_name for _ in range(len(imgs))]
-
+        for object_name in self.object_names:
+            if RENDERS_PATH(train_dataset, object_name).is_dir() and MASKS_PATH(train_dataset, object_name):
+                imgs = list(sorted(RENDERS_PATH(train_dataset, object_name).iterdir()))
+                masks = list(sorted(MASKS_PATH(train_dataset, object_name).iterdir()))
+                assert len(imgs) == len(masks), "Number of masks is not the same as number of renders."
+                self.imgs += imgs
+                self.masks += masks
+                self.labels += [object_name for _ in range(len(imgs))]
+            else:
+                print(f"WARNING: Object {object_name} does not have any renders or masks in {OBJECT_PATH(train_dataset, object_name)} and will be excluded during training")
+            
     def __getitem__(self, idx):
         # load images and masks
         img_path = self.imgs[idx]

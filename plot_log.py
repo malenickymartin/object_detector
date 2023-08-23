@@ -1,13 +1,13 @@
 from config import (
-    MODEL_PATH
+    RESULT_PATH
 )
 
 import numpy as np
 from matplotlib import pyplot as plt
 
-object_name = "rc-car"
+object_name = "rc-car_test"
 
-with open(MODEL_PATH(object_name) / "log.txt", "r") as f:
+with open(RESULT_PATH(object_name) / "log.txt", "r") as f:
     log = f.readlines()
 
 log = log[2:((len(log)-2)//3)*3+2]

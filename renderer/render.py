@@ -1,8 +1,7 @@
 # Standard Library
 import argparse
 from pathlib import Path
-
-# Third Party
+import os
 import numpy as np
 import torch
 from PIL import Image
@@ -16,23 +15,22 @@ from happypose.toolbox.renderer.panda3d_scene_renderer import Panda3dSceneRender
 from happypose.toolbox.utils.logging import get_logger, set_logging_level
 
 # Local
-from render.data_generator import generate_object_transform, generate_camera, generate_lights
-from render import conversion
+from renderer.data_generator import generate_object_transform, generate_camera, generate_lights
+from renderer import conversion
 
 from config import (
     RENDERS_PATH,
     MASKS_PATH,
-    MESH_PATH
+    MESH_PATH,
+    DATASET_PATH
 )
 
 logger = get_logger(__name__)
 
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
-def make_object_dataset(object_name: Path) -> RigidObjectDataset:
+def make_object_dataset(dataset_name, object_name: Path) -> RigidObjectDataset:
     rigid_objects = []
     mesh_units = "mm"
-    object_dir = MESH_PATH(object_name)
+    object_dir = MESH_PATH(dataset_name, object_name)
     label = object_name
     mesh_path = None
     for fn in object_dir.glob("*"):
@@ -45,9 +43,9 @@ def make_object_dataset(object_name: Path) -> RigidObjectDataset:
     rigid_object_dataset = RigidObjectDataset(rigid_objects)
     return rigid_object_dataset
 
-def make_output_visualization(object_name: Path, args) -> None:
+def make_output_visualization(dataset_name, object_name: Path, args) -> None:
     
-    object_dataset = make_object_dataset(object_name)
+    object_dataset = make_object_dataset(dataset_name, object_name)
     renderer = Panda3dSceneRenderer(object_dataset)
     
     for render_num in range(args.num_of_images):
@@ -81,27 +79,33 @@ def make_output_visualization(object_name: Path, args) -> None:
                 continue
 
             render = Image.fromarray(renderings.rgb, "RGB")
-            render.save(str(RENDERS_PATH(object_name) / f"render{render_num}.png"))
+            render.save(str(RENDERS_PATH(dataset_name, object_name) / f"render{render_num}.png"))
             mask = renderings.binary_mask.astype(np.uint8)*255
             mask = Image.fromarray(mask)
-            mask.save(str(MASKS_PATH(object_name) / f"mask{render_num}.png"))
+            mask.save(str(MASKS_PATH(dataset_name, object_name) / f"mask{render_num}.png"))
 
-            logger.info(f"Wrote render number {render_num} to {str(RENDERS_PATH(object_name) / f'render{render_num}.png')}.")
+            logger.info(f"Wrote render number {render_num} to {str(RENDERS_PATH(dataset_name, object_name) / f'render{render_num}.png')}.")
             break
     return
 
 if __name__ == "__main__":
     set_logging_level("info")
     parser = argparse.ArgumentParser()
-    parser.add_argument("object_name",type=str, nargs='?', default="pen")
-    parser.add_argument("num_of_images", type=int, nargs='?', default=5000)
+    parser.add_argument("dataset_name",type=str, nargs='?', default="augs")
+    parser.add_argument("object_name",type=str, nargs='?', default="scissors")
+    parser.add_argument("num_of_images", type=int, nargs='?', default=50)
     parser.add_argument("camera_res", type=list, nargs='?', default=[480, 640])
     parser.add_argument("object_image_ratio", type=int, nargs='?', default=0.001)
     args = parser.parse_args()
 
-    object_name = args.object_name
+    dataset_name = args.dataset_name
+    if args.object_name == None:
+        object_names = sorted(os.listdir(DATASET_PATH(args.dataset_name)))
+    else:
+        object_names = [args.object_name]
 
-    RENDERS_PATH(object_name).mkdir(exist_ok=True)
-    MASKS_PATH(object_name).mkdir(exist_ok=True)
+    for object in object_names:
+        RENDERS_PATH(dataset_name, object).mkdir(exist_ok=True)
+        MASKS_PATH(dataset_name, object).mkdir(exist_ok=True)
 
-    make_output_visualization(object_name, args)
+        make_output_visualization(dataset_name, object, args)

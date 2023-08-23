@@ -4,11 +4,10 @@ import time
 import numpy as np
 
 from config import (
-    MODEL_PATH
+    RESULT_PATH
 )
 
 import torch
-import torchvision.models.detection.mask_rcnn
 from detector import utils
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch, model_folder, print_freq, scaler=None):
@@ -61,24 +60,11 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, model_folder, 
         metric_logger.update(loss=losses_reduced, **loss_dict_reduced)
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
 
-    with open(MODEL_PATH(model_folder) / "log.txt", "a") as f:
+    with open(RESULT_PATH(model_folder) / "log.txt", "a") as f:
         f.write("Epoch: " + str(epoch) + '\n')
         f.write(str(np.mean(log)) + '\n')
 
     return metric_logger
-
-
-def _get_iou_types(model):
-    model_without_ddp = model
-    if isinstance(model, torch.nn.parallel.DistributedDataParallel):
-        model_without_ddp = model.module
-    iou_types = ["bbox"]
-    if isinstance(model_without_ddp, torchvision.models.detection.MaskRCNN):
-        iou_types.append("segm")
-    if isinstance(model_without_ddp, torchvision.models.detection.KeypointRCNN):
-        iou_types.append("keypoints")
-    return iou_types
-
 
 @torch.inference_mode()
 def evaluate(model, data_loader, model_folder, device):
@@ -118,7 +104,7 @@ def evaluate(model, data_loader, model_folder, device):
 
         metric_logger.update(model_time=model_time)
     
-    with open(MODEL_PATH(model_folder) / "log.txt", "a") as f:
+    with open(RESULT_PATH(model_folder) / "log.txt", "a") as f:
         f.write(str(np.mean(log)) + '\n')
 
     # gather the stats from all processes

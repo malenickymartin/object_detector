@@ -4,9 +4,11 @@ from PIL import Image, ImageDraw
 import numpy as np
 import argparse
 import torch
+import os
 
 from config import (
-    MODEL_PATH,
+    RESULT_PATH,
+    DATASET_PATH
 )
 
 device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
@@ -52,7 +54,7 @@ def get_bb(img, model, min_score, str_labels, device):
 
 def main(object_name, image_path, min_score, best_result_path, result_path, str_labels):
 
-    with open(MODEL_PATH(object_name) / "model.pkl", "rb") as f:
+    with open(RESULT_PATH(object_name) / "model.pkl", "rb") as f:
         model = torch.load(f, device)
 
     model.to(device)
@@ -130,36 +132,22 @@ def main(object_name, image_path, min_score, best_result_path, result_path, str_
     all_masks.save(result_path)
     print(f"All masks saved to {result_path}.")
 
-    ##### MATPLOTLIB ####
-    """
-    fig, ax = plt.subplots()
-    plt.imshow(all_masks[0], cmap='gray')
-
-    for i in range(len(boxes)):
-        box = boxes[i]
-        w = box[2]-box[0]
-        h = box[3]-box[1]
-        rect = patches.Rectangle((box[0], box[1]), w, h, edgecolor='r', facecolor='none')
-        ax.add_patch(rect)
-    plt.show()
-    """
-
     return best_boxes
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("model_folder",type=str, nargs='?', default="rc-car")
-    parser.add_argument("model_lables",type=str, nargs='?', default="rc-car")
+    parser.add_argument("model_folder",type=str, nargs='?', default="rc-car_test")
+    parser.add_argument("train_dataset",type=str, nargs='?', default="train")
     parser.add_argument("min_score",type=float, nargs='?', default=0.85)
     parser.add_argument("test_num",type=float, nargs='?', default=7)
     args = parser.parse_args()
 
-    for i in range(1,7):
+    for i in range(1,3):
         args.test_num = i
-        image_path = MODEL_PATH(args.model_folder) / f"test{args.test_num}.png"
-        best_result_path = MODEL_PATH(args.model_folder) / f"result_best_{args.test_num}.png"
-        result_path = MODEL_PATH(args.model_folder) / f"result_{args.test_num}.png"
-
-        labels = args.model_lables.split(",")
+        image_path = RESULT_PATH(args.model_folder) / f"test{args.test_num}.png"
+        best_result_path = RESULT_PATH(args.model_folder) / f"result_best_{args.test_num}.png"
+        result_path = RESULT_PATH(args.model_folder) / f"result_{args.test_num}.png"
+    
+        labels = sorted(os.listdir(DATASET_PATH(args.train_dataset)))
 
         main(args.model_folder, image_path, args.min_score, best_result_path, result_path, labels)
