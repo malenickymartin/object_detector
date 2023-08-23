@@ -1,14 +1,54 @@
 import torch
 from torchvision import transforms
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 import numpy as np
 import argparse
+import torch
 
 from config import (
     MODEL_PATH,
 )
 
 device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
+
+def get_bb(img, model, min_score, str_labels, device):
+
+    model.to(device)
+
+    img = torch.from_numpy(img)
+    img = img.to(device)
+
+    output = model(img)[0]
+
+    labels = output["labels"].cpu().detach().numpy().tolist()
+    scores = output["scores"].cpu().detach().numpy()
+    boxes = output["boxes"].cpu().detach().numpy()
+
+    print(f"The number of detected objects is {len(labels)}.")
+    print(f"The best match has score of {np.max(scores)}.")
+    print(f"Other scores are: {scores}.")
+
+    for i in range(len(labels)):
+        labels[i] = str_labels[labels[i]-1]
+        scores[i] = round(scores[i], 3)
+    
+    best_boxes = []
+    best_labels = []
+    for i, score in enumerate(scores):
+        if score >= min_score:
+            best_boxes.append(boxes[i])
+            best_labels.append(labels[i])
+
+    # Enlarge boxes by 5 %
+    for box in best_boxes:
+        dw = 5*(box[2]-box[0])/100
+        dh = 5*(box[3]-box[1])/100
+        box[0] = np.clip(box[0]-dw, 0, img.shape[-1]+1)
+        box[1] = np.clip(box[1]-dh, 0, img.shape[-2]+1)
+        box[2] = np.clip(box[2]+dw, 0, img.shape[-1]-1)
+        box[3] = np.clip(box[3]+dh, 0, img.shape[-2]-1)
+
+    return best_boxes, best_labels
 
 def main(object_name, image_path, min_score, best_result_path, result_path, str_labels):
 

@@ -4,7 +4,7 @@ from pathlib import Path
 PROJECT_PATH = Path(os.path.realpath(__file__)).parent
 OBJECTS_PATH = PROJECT_PATH / "objects"
 BACKGROUNDS_PATH = PROJECT_PATH / "backgrounds"
-MODELS_PATH = PROJECT_PATH / "models"
+MODELS_PATH = PROJECT_PATH / "results"
 
 def OBJECT_PATH(object_name : str) -> Path:
     return OBJECTS_PATH / object_name

@@ -124,8 +124,8 @@ def main(object_names, model_folder):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("object_names",type=str, nargs='?', default="scissors,pen,drill")
-    parser.add_argument("model_folder",type=str, nargs='?', default="scissors_pen_drill")
+    parser.add_argument("object_names",type=str, nargs='?', default="mustard")
+    parser.add_argument("model_folder",type=str, nargs='?', default="mustard")
     args = parser.parse_args()
 
     object_names = args.object_names.split(",")

@@ -3,4 +3,5 @@ __pycache__/
 backgrounds
 
 /models/
+/results/
 /objects/
