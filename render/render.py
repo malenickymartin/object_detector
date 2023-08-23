@@ -94,7 +94,7 @@ if __name__ == "__main__":
     set_logging_level("info")
     parser = argparse.ArgumentParser()
     parser.add_argument("object_name",type=str, nargs='?', default="pen")
-    parser.add_argument("num_of_images", type=int, nargs='?', default=2000)
+    parser.add_argument("num_of_images", type=int, nargs='?', default=5000)
     parser.add_argument("camera_res", type=list, nargs='?', default=[480, 640])
     parser.add_argument("object_image_ratio", type=int, nargs='?', default=0.001)
     args = parser.parse_args()

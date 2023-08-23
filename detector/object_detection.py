@@ -65,9 +65,7 @@ def get_transform(object_names):
     return T.Compose(transforms)
 
 def main(object_names, model_folder):
-    # train on the GPU or on the CPU, if a GPU is not available
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    # our dataset has two classes only - background and object
     num_classes = len(object_names) + 1
     # use our dataset and defined transformations
     dataset = Dataset(object_names, get_transform(object_names))
@@ -126,8 +124,8 @@ def main(object_names, model_folder):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("object_names",type=str, nargs='?', default="pen")
-    parser.add_argument("model_folder",type=str, nargs='?', default="pen")
+    parser.add_argument("object_names",type=str, nargs='?', default="scissors,pen,drill")
+    parser.add_argument("model_folder",type=str, nargs='?', default="scissors_pen_drill")
     args = parser.parse_args()
 
     object_names = args.object_names.split(",")

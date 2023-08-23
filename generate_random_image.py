@@ -14,8 +14,8 @@ def get_transform(object_name):
     transforms.append(T.AddBackground())
     return T.Compose(transforms)
 
-object_name = "scissors"
-model_folder = "scissors_pen_drill"
+object_name = "rc-car"
+model_folder = "rc-car"
 
 transforms = get_transform(object_name)
 images_list = os.listdir(RENDERS_PATH(object_name))
@@ -26,6 +26,6 @@ mask = np.array(Image.open(MASKS_PATH(object_name) / f"mask{image_num}.png"))
 
 img, _, _ = transforms(img, mask, object_name)
 
-img.save(MODEL_PATH(model_folder) / "test1.png")
+img.save(MODEL_PATH(model_folder) / "test6.png")
 
 

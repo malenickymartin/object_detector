@@ -10,8 +10,6 @@ from config import (
 import torch
 import torchvision.models.detection.mask_rcnn
 from detector import utils
-from detector.coco_eval import CocoEvaluator
-from detector.coco_utils import get_coco_api_from_dataset
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch, model_folder, print_freq, scaler=None):
     model.train()
@@ -115,7 +113,7 @@ def evaluate(model, data_loader, model_folder, device):
         model_time = time.time()
         outputs = model(images)
 
-        outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
+        outputs = [{k: v.to(device) for k, v in t.items()} for t in outputs]
         model_time = time.time() - model_time
 
         metric_logger.update(model_time=model_time)

@@ -108,16 +108,18 @@ def main(object_name, image_path, min_score, best_result_path, result_path, str_
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("model_folder",type=str, nargs='?', default="scissors_pen_drill")
-    parser.add_argument("model_lables",type=str, nargs='?', default="scissors,pen,drill")
+    parser.add_argument("model_folder",type=str, nargs='?', default="rc-car")
+    parser.add_argument("model_lables",type=str, nargs='?', default="rc-car")
     parser.add_argument("min_score",type=float, nargs='?', default=0.85)
-    parser.add_argument("test_num",type=float, nargs='?', default=1)
+    parser.add_argument("test_num",type=float, nargs='?', default=7)
     args = parser.parse_args()
 
-    image_path = MODEL_PATH(args.model_folder) / f"test{args.test_num}.png"
-    best_result_path = MODEL_PATH(args.model_folder) / f"result_best_{args.test_num}.png"
-    result_path = MODEL_PATH(args.model_folder) / f"result_{args.test_num}.png"
+    for i in range(1,7):
+        args.test_num = i
+        image_path = MODEL_PATH(args.model_folder) / f"test{args.test_num}.png"
+        best_result_path = MODEL_PATH(args.model_folder) / f"result_best_{args.test_num}.png"
+        result_path = MODEL_PATH(args.model_folder) / f"result_{args.test_num}.png"
 
-    labels = args.model_lables.split(",")
+        labels = args.model_lables.split(",")
 
-    main(args.model_folder, image_path, args.min_score, best_result_path, result_path, labels)
+        main(args.model_folder, image_path, args.min_score, best_result_path, result_path, labels)
