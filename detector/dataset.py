@@ -2,16 +2,13 @@ import os
 import numpy as np
 import torch
 from PIL import Image
+from detector.transforms import Compose
 
-from config import (
-    RENDERS_PATH,
-    MASKS_PATH,
-    DATASET_PATH,
-    OBJECT_PATH
-)
+from config import RENDERS_PATH, MASKS_PATH, DATASET_PATH, OBJECT_PATH
+
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self, train_dataset, transforms):
+    def __init__(self, train_dataset: str, transforms: Compose):
         self.object_names = sorted(os.listdir(DATASET_PATH(train_dataset)))
         self.transforms = transforms
         # load all image files, sorting them to
@@ -20,16 +17,22 @@ class Dataset(torch.utils.data.Dataset):
         self.masks = []
         self.labels = []
         for object_name in self.object_names:
-            if RENDERS_PATH(train_dataset, object_name).is_dir() and MASKS_PATH(train_dataset, object_name):
+            if RENDERS_PATH(train_dataset, object_name).is_dir() and MASKS_PATH(
+                train_dataset, object_name
+            ):
                 imgs = list(sorted(RENDERS_PATH(train_dataset, object_name).iterdir()))
                 masks = list(sorted(MASKS_PATH(train_dataset, object_name).iterdir()))
-                assert len(imgs) == len(masks), "Number of masks is not the same as number of renders."
+                assert len(imgs) == len(
+                    masks
+                ), "Number of masks is not the same as number of renders."
                 self.imgs += imgs
                 self.masks += masks
                 self.labels += [object_name for _ in range(len(imgs))]
             else:
-                print(f"WARNING: Object {object_name} does not have any renders or masks in {OBJECT_PATH(train_dataset, object_name)} and will be excluded during training")
-            
+                print(
+                    f"WARNING: Object {object_name} does not have any renders or masks in {OBJECT_PATH(train_dataset, object_name)} and will be excluded during training"
+                )
+
     def __getitem__(self, idx):
         # load images and masks
         img_path = self.imgs[idx]
@@ -59,7 +62,7 @@ class Dataset(torch.utils.data.Dataset):
             ymax = np.max(pos[0])
             boxes.append([xmin, ymin, xmax, ymax])
 
-            labels[i] = self.object_names.index(labels[i])+1
+            labels[i] = self.object_names.index(labels[i]) + 1
 
         # convert everything into a torch.Tensor
         boxes = torch.as_tensor(boxes, dtype=torch.float32)
@@ -84,5 +87,3 @@ class Dataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.imgs)
-
-    

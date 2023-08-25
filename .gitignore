@@ -1,7 +1,6 @@
 __pycache__/
 
-backgrounds
+/backgrounds/
 
 /models/
-/results/
 /datasets/
