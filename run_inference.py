@@ -6,7 +6,6 @@ import argparse
 import torch
 import os
 from typing import Union, Tuple
-from pathlib import Path
 from detector.train_detector import MaskRCNN
 
 from config import MODEL_PATH, DATASET_PATH
@@ -14,10 +13,10 @@ from config import MODEL_PATH, DATASET_PATH
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 
-def get_bb(
+def get_bounding_boxes(
     img: Union[np.ndarray, torch.Tensor],
     model: torch.nn.Module,
-    str_labels: list[str],
+    str_labels: list[str] = ["0", "1"],
     device: torch.device = torch.device("cpu"),
     min_score: float = 0.75,
 ) -> Tuple[list[list], list[str], list[float]]:
@@ -58,10 +57,34 @@ def get_bb(
         box[2] = np.clip(box[2] + dw, 0, img.shape[-1] - 1)
         box[3] = np.clip(box[3] + dh, 0, img.shape[-2] - 1)
 
+    for i, box_1 in enumerate(best_boxes):
+        for j, box_2 in enumerate(best_boxes):
+            if i == j or best_labels[i] != best_labels[j]:
+                continue
+            box_area = (box_2[2] - box_2[0]) * (box_2[3] - box_2[1])
+            overlay_box = [
+                max(box_1[0], box_2[0]),
+                max(box_1[1], box_2[1]),
+                min(box_1[2], box_2[2]),
+                min(box_1[3], box_2[3]),
+            ]
+            if overlay_box[0] > overlay_box[2] or overlay_box[1] > overlay_box[3]:
+                continue
+            overlay = (overlay_box[2] - overlay_box[0]) * (
+                overlay_box[3] - overlay_box[1]
+            )
+            overlay_rate = overlay / box_area
+            if overlay_rate > 0.9:
+                print(
+                    f"INFO: {best_labels[j]} with score of {best_scores[j]} was removed, as it's bouding box was most likely subset of another detected {best_labels[j]}."
+                )
+                best_labels.pop(j)
+                best_scores.pop(j)
+                best_boxes.pop(j)
+
     return best_boxes, best_labels, best_scores
 
 
-# , image_path: Union[Path, str], result_path: Path
 def main(args: argparse.ArgumentParser) -> None:
     if args.experiment == "":
         ckpt_path = MODEL_PATH(args.model_dir) / "model.ckpt"
@@ -122,9 +145,7 @@ def main(args: argparse.ArgumentParser) -> None:
             sc = ImageDraw.Draw(all_masks)
             sc.text((boxes[i][0] + 3, boxes[i][1] + 12), str(scores[i]), (0, 0, 255))
         all_masks.save(result_path / f"all_results_{img_idx}.png")
-        print(
-            f"All masks saved to {result_path / f'all_results_{img_idx}.png'}."
-        )
+        print(f"All masks saved to {result_path / f'all_results_{img_idx}.png'}.")
 
         # BEST SAVE
         best_boxes = []
@@ -140,7 +161,7 @@ def main(args: argparse.ArgumentParser) -> None:
 
         if len(best_boxes) == 0:
             print(f"No object with socre under {args.min_score} detected on the image.")
-            return
+            continue
 
         for j, box_1 in enumerate(best_boxes):
             for i, box_2 in enumerate(best_boxes):
@@ -187,20 +208,18 @@ def main(args: argparse.ArgumentParser) -> None:
                 (0, 0, 255),
             )
         best_mask.save(result_path / f"best_result_{img_idx}.png")
-        print(
-            f"Best mask saved to: {result_path / f'best_result_{img_idx}.png'}."
-        )
+        print(f"Best mask saved to: {result_path / f'best_result_{img_idx}.png'}.")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "model_dir", type=str, nargs="?", default="train-three-objects_aug-ycbv"
+        "model_dir", type=str, nargs="?", default="train-rc-car_aug-ycbv"
     )
-    parser.add_argument("train_dataset", type=str, nargs="?", default="three-objects")
+    parser.add_argument("train_dataset", type=str, nargs="?", default="rc-car")
     parser.add_argument("min_score", type=float, nargs="?", default=0.85)
-    parser.add_argument("test_img_num", type=float, nargs="?", default=5)
-    parser.add_argument("--experiment", "-e", type=str, default="test_3x500")
+    parser.add_argument("test_img_num", type=float, nargs="?", default=8)
+    parser.add_argument("--experiment", "-e", type=str, default="test_5000")
     args = parser.parse_args()
 
     main(args)

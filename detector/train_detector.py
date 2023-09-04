@@ -30,18 +30,11 @@ def get_transform(train_dataset: str, aug_dataset: str) -> T.Compose:
 
 
 def get_model_instance_segmentation(num_classes: int):
-    # load an instance segmentation model pre-trained on COCO
     model = torchvision.models.detection.maskrcnn_resnet50_fpn(weights="DEFAULT")
-
-    # get number of input features for the classifier
     in_features = model.roi_heads.box_predictor.cls_score.in_features
-    # replace the pre-trained head with a new one
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
-
-    # now get the number of input features for the mask classifier
     in_features_mask = model.roi_heads.mask_predictor.conv5_mask.in_channels
     hidden_layer = 256
-    # and replace the mask predictor with a new one
     model.roi_heads.mask_predictor = MaskRCNNPredictor(
         in_features_mask, hidden_layer, num_classes
     )
@@ -49,14 +42,12 @@ def get_model_instance_segmentation(num_classes: int):
 
 
 def get_dataloaders(args: argparse.ArgumentParser, batch_size: int):
-    # use our dataset and defined transformations
     dataset = Dataset(
         args.train_dataset, get_transform(args.train_dataset, args.aug_dataset)
     )
     dataset_test = Dataset(
         args.train_dataset, get_transform(args.train_dataset, args.aug_dataset)
     )
-    # split the dataset in train and test set
     indices = torch.randperm(len(dataset)).tolist()
     dataset = torch.utils.data.Subset(
         dataset, indices[: math.floor(TRAIN_TO_TEST_RATIO * len(indices))]
@@ -65,7 +56,6 @@ def get_dataloaders(args: argparse.ArgumentParser, batch_size: int):
         dataset_test,
         indices[-math.ceil((1 - TRAIN_TO_TEST_RATIO) * len(indices)) + 1 :],
     )
-    # define training and validation data loaders
     data_loader = torch.utils.data.DataLoader(
         dataset,
         batch_size=batch_size,
@@ -87,7 +77,6 @@ def get_dataloaders(args: argparse.ArgumentParser, batch_size: int):
 TRAIN_TO_TEST_RATIO = 0.7
 
 
-# define the LightningModule
 class MaskRCNN(pl.LightningModule):
     def __init__(self, num_classes: int):
         super().__init__()
@@ -99,14 +88,11 @@ class MaskRCNN(pl.LightningModule):
         return self.model(images)
 
     def training_step(self, batch, batch_idx):
-        # training_step defines the train loop.
-        # it is independent of forward
         self.model.train()
         images, targets = batch
         with torch.cuda.amp.autocast(enabled=False):
             loss_dict = self.model(images, targets)
 
-        # reduce losses over all GPUs for logging purposes
         loss_dict_reduced = utils.reduce_dict(loss_dict)
         losses_reduced = sum(loss for loss in loss_dict_reduced.values())
 
@@ -190,7 +176,6 @@ def main(args: argparse.ArgumentParser) -> None:
         devices=1,
         max_epochs=num_epochs,
         default_root_dir=output_dir,
-        log_every_n_steps=len(data_loader),
         logger=logger,
         callbacks=[checkpoint_callback],
     )
@@ -200,13 +185,13 @@ def main(args: argparse.ArgumentParser) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("train_dataset", type=str, nargs="?", default="train")
+    parser.add_argument("train_dataset", type=str, nargs="?", default="bbq")
     parser.add_argument("aug_dataset", type=str, nargs="?", default="ycbv")
-    parser.add_argument("--experiment", "-e", type=str, default="test_1")
+    parser.add_argument("--experiment", "-e", type=str, default="test_100")
 
     args = parser.parse_args()
     train_models = os.listdir(DATASET_PATH(args.train_dataset))
-    if len(train_models):
+    if len(train_models) == 0:
         args.output_dir_name = f"train-{train_models[0]}_aug-{args.aug_dataset}"
     else:
         args.output_dir_name = f"train-{args.train_dataset}_aug-{args.aug_dataset}"

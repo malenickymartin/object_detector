@@ -36,7 +36,6 @@ def make_object_dataset(dataset_name: str, object_name: str) -> RigidObjectDatas
     rigid_objects.append(
         RigidObject(label=label, mesh_path=mesh_path, mesh_units=mesh_units)
     )
-    # TODO: fix mesh units
     rigid_object_dataset = RigidObjectDataset(rigid_objects)
     return rigid_object_dataset
 
@@ -116,7 +115,15 @@ if __name__ == "__main__":
         object_names = sorted(os.listdir(DATASET_PATH(args.dataset_name)))
     else:
         object_names = [args.object_name]
-    object_names = ["bowl", "clamp", "drill", "foam-brick", "gelatin-box", "cheez-it", "large-clamp", "master-chef", "meat-can", "mug", "mustard", "pitcher-base", "pudding-box", "scissors", "soup-can", "sugar", "tuna-can", "wood-block"]
+    object_names = [
+        "pitcher-base",
+        "pudding-box",
+        "scissors",
+        "soup-can",
+        "sugar",
+        "tuna-can",
+        "wood-block",
+    ]
     for object in object_names:
         RENDERS_PATH(args.dataset_name, object).mkdir(exist_ok=True)
         MASKS_PATH(args.dataset_name, object).mkdir(exist_ok=True)
