@@ -8,7 +8,7 @@ from config import RENDERS_PATH, MASKS_PATH, DATASET_PATH, OBJECT_PATH
 
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self, train_dataset: str, transforms: Compose):
+    def __init__(self, train_dataset: str, transforms: Compose = None):
         self.object_names = sorted(os.listdir(DATASET_PATH(train_dataset)))
         self.transforms = transforms
         # load all image files, sorting them to
