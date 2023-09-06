@@ -126,13 +126,37 @@ class AddBackground(nn.Module):
 
         background = background.resize(render.shape[:2][::-1])
         result = np.where(all_masks, render, background)
+        return result, masks, labels
 
-        result = Image.fromarray(result)
 
-        result = T.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.3, hue=0.05)(
-            result
+class ColorDistortion(nn.Module):
+    def forward(self, image, masks, labels):
+        image = Image.fromarray(image)
+
+        result = T.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.3, hue=0.125)(
+            image
         )
+
         result = T.GaussianBlur(kernel_size=5, sigma=(0.2, 2))(result)
+
+        result = T.ToTensor()(result)
+        result = result + np.random.uniform(0, 1) * torch.randn_like(result) * 0.05
+
+        random_values = np.random.normal(0, 0.15, result.shape)
+        smoothing_iterations = np.random.randint(1, 10)
+        for _ in range(smoothing_iterations):
+            random_values = (
+                random_values
+                + np.roll(random_values, shift=(0, 1), axis=(0, 1))
+                + np.roll(random_values, shift=(0, -1), axis=(0, 1))
+                + np.roll(random_values, shift=(1, 0), axis=(0, 1))
+                + np.roll(random_values, shift=(-1, 0), axis=(0, 1))
+            ) / 5
+        random_values = np.clip(random_values, -1, 1)
+
+        result = result + random_values * np.random.uniform(0, 1)
+
+        result = torch.clip(result, 0, 1)
 
         return result, masks, labels
 
