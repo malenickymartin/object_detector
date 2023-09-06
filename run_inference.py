@@ -6,7 +6,7 @@ import argparse
 import torch
 import os
 from typing import Union, Tuple
-from detector.train_detector import MaskRCNN
+from detector.run_detector_training import MaskRCNN
 
 from config import MODEL_PATH, DATASET_PATH
 
@@ -14,22 +14,28 @@ device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 
 
 def get_bounding_boxes(
-    img: Union[np.ndarray, torch.Tensor],
+    img: np.ndarray,
     model: torch.nn.Module,
     str_labels: list[str] = ["0", "1"],
     device: torch.device = torch.device("cpu"),
     min_score: float = 0.75,
 ) -> Tuple[list[list], list[str], list[float]]:
+    
     model.to(device)
-    if isinstance(img, np.ndarray):
-        img = torch.from_numpy(img)
-    img = img.to(device)
+
+    img = (img.transpose([2,0,1])/255)[None]
+    img = torch.from_numpy(img)
+    img = img.to(device=device, dtype=torch.float)
 
     output = model(img)[0]
 
     labels = output["labels"].cpu().detach().numpy().tolist()
     scores = output["scores"].cpu().detach().numpy()
     boxes = output["boxes"].cpu().detach().numpy()
+
+    if len(labels) == 0:
+        print("No objects were detected on this image.")
+        return [], [], []
 
     print(f"The number of detected objects is {len(labels)}.")
     print(f"The best match has score of {np.max(scores)}.")
@@ -115,7 +121,9 @@ def main(args: argparse.ArgumentParser) -> None:
         masks = output["masks"].cpu().detach().numpy()
         boxes = output["boxes"].cpu().detach().numpy()
 
-        print()
+        if len(masks) == 0:
+            print("No objects were detected on this image.")
+            continue
         print(f"The number of detected objects is {len(masks)}.")
         print(f"The best match has score of {np.max(scores)}.")
         print(f"Other scores are: {scores}.")
@@ -160,7 +168,7 @@ def main(args: argparse.ArgumentParser) -> None:
                 best_scores.append(scores[i])
 
         if len(best_boxes) == 0:
-            print(f"No object with socre under {args.min_score} detected on the image.")
+            print(f"No object with score under {args.min_score} detected on the image.")
             continue
 
         for j, box_1 in enumerate(best_boxes):
@@ -214,12 +222,12 @@ def main(args: argparse.ArgumentParser) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "model_dir", type=str, nargs="?", default="train-rc-car_aug-ycbv"
+        "model_dir", type=str, nargs="?", default="train-three-objects_aug-ycbv"
     )
-    parser.add_argument("train_dataset", type=str, nargs="?", default="rc-car")
-    parser.add_argument("min_score", type=float, nargs="?", default=0.85)
-    parser.add_argument("test_img_num", type=float, nargs="?", default=8)
-    parser.add_argument("--experiment", "-e", type=str, default="test_5000")
+    parser.add_argument("train_dataset", type=str, nargs="?", default="three-objects")
+    parser.add_argument("min_score", type=float, nargs="?", default=0.75)
+    parser.add_argument("test_img_num", type=float, nargs="?", default=12)
+    parser.add_argument("--experiment", "-e", type=str, default="test_3x1000_podruhe")
     args = parser.parse_args()
 
     main(args)
