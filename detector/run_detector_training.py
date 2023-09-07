@@ -41,7 +41,8 @@ def get_model_instance_segmentation(num_classes: int):
     return model
 
 
-def get_dataloaders(args: argparse.ArgumentParser, batch_size: int):
+def get_dataloaders(args: argparse.ArgumentParser, batch_size: int, num_classes: int):
+    num_classes = num_classes-1
     dataset = Dataset(
         args.train_dataset, get_transform(args.train_dataset, args.aug_dataset)
     )
@@ -49,6 +50,8 @@ def get_dataloaders(args: argparse.ArgumentParser, batch_size: int):
         args.train_dataset, get_transform(args.train_dataset, args.aug_dataset)
     )
     indices = torch.randperm(len(dataset)).tolist()
+    assert num_classes*args.img_per_obj < len(dataset), "Requested number of images for training is bigger than size of dataset."
+    indices = indices[0:num_classes*args.img_per_obj]
     dataset = torch.utils.data.Subset(
         dataset, indices[: math.floor(TRAIN_TO_TEST_RATIO * len(indices))]
     )
@@ -157,12 +160,12 @@ def main(args: argparse.ArgumentParser) -> None:
     output_dir = MODEL_PATH(args.output_dir_name) / args.experiment
     output_dir.mkdir(exist_ok=True, parents=True)
     num_epochs = 10
-    batch_size = 16
+    batch_size = args.batch_size
 
     object_names = sorted(os.listdir(DATASET_PATH(args.train_dataset)))
     num_classes = len(object_names) + 1
 
-    data_loader, data_loader_test = get_dataloaders(args, batch_size)
+    data_loader, data_loader_test = get_dataloaders(args, batch_size, num_classes)
 
     logger = CSVLogger(output_dir, name="", version="")
 
@@ -187,13 +190,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("train_dataset", type=str, nargs="?", default="three-objects")
     parser.add_argument("aug_dataset", type=str, nargs="?", default="ycbv")
-    parser.add_argument("--experiment", "-e", type=str, default="test_3x1000_2")
+    parser.add_argument("--batch_size", "-b", type=int, default=8)
+    parser.add_argument("--img_per_obj", "-i", type=int, default=1000)
+    parser.add_argument("--experiment", "-e", type=str, default="test_3x5000_2")
 
     args = parser.parse_args()
-    train_models = os.listdir(DATASET_PATH(args.train_dataset))
-    if len(train_models) == 0:
-        args.output_dir_name = f"train-{train_models[0]}_aug-{args.aug_dataset}"
-    else:
-        args.output_dir_name = f"train-{args.train_dataset}_aug-{args.aug_dataset}"
+
+    args.output_dir_name = f"train-{args.train_dataset}_aug-{args.aug_dataset}"
 
     main(args)

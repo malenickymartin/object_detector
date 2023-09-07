@@ -1,6 +1,12 @@
 __pycache__/
 
-/backgrounds/
+/backgrounds/*.jpg
 
 /models/
 /datasets/
+
+/detector/train_on_bop_ycbv.py
+/bop.py
+/bop_challenge_eval/
+
+README.md

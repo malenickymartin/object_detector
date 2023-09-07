@@ -21,7 +21,7 @@ augs_dataset = "ycbv"
 object_name = "drill"
 model_folder = "train-three-objects_aug-ycbv"
 
-for i in range(1,2):
+for i in range(1,20):
     result_image_name = "test"+str(i)+".png"
 
     transforms = get_transform(dataset_name, augs_dataset)
@@ -36,6 +36,6 @@ for i in range(1,2):
     transform = TorchTransforms.ToPILImage()
     img = transform(img)
 
-    img.save(MODEL_PATH(model_folder) / result_image_name)
+    img.save(MODEL_PATH(model_folder) / "test" /result_image_name)
 
 

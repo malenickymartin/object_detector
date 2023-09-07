@@ -104,9 +104,9 @@ def make_output_visualization(args: argparse.ArgumentParser, object_name: str) -
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("dataset_name", type=str, nargs="?", default="ycbv")
+    parser.add_argument("dataset_name", type=str, nargs="?", default="three-objects")
     parser.add_argument("--object_name", type=str, default=None)
-    parser.add_argument("num_of_images", type=int, nargs="?", default=1000)
+    parser.add_argument("num_of_images", type=int, nargs="?", default=5000)
     parser.add_argument("camera_res", type=list, nargs="?", default=[480, 640])
     parser.add_argument("object_image_ratio", type=int, nargs="?", default=0.001)
     args = parser.parse_args()
@@ -115,15 +115,7 @@ if __name__ == "__main__":
         object_names = sorted(os.listdir(DATASET_PATH(args.dataset_name)))
     else:
         object_names = [args.object_name]
-    object_names = [
-        "pitcher-base",
-        "pudding-box",
-        "scissors",
-        "soup-can",
-        "sugar",
-        "tuna-can",
-        "wood-block",
-    ]
+
     for object in object_names:
         RENDERS_PATH(args.dataset_name, object).mkdir(exist_ok=True)
         MASKS_PATH(args.dataset_name, object).mkdir(exist_ok=True)

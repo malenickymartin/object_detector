@@ -22,20 +22,21 @@ def get_bounding_boxes(
 ) -> Tuple[list[list], list[str], list[float]]:
     
     model.to(device)
-
+    """
     img = (img.transpose([2,0,1])/255)[None]
     img = torch.from_numpy(img)
     img = img.to(device=device, dtype=torch.float)
-
+    """
     output = model(img)[0]
 
     labels = output["labels"].cpu().detach().numpy().tolist()
     scores = output["scores"].cpu().detach().numpy()
     boxes = output["boxes"].cpu().detach().numpy()
+    masks = output["masks"].cpu().detach().numpy()
 
     if len(labels) == 0:
         print("No objects were detected on this image.")
-        return [], [], []
+        return [], [], [], []
 
     print(f"The number of detected objects is {len(labels)}.")
     print(f"The best match has score of {np.max(scores)}.")
@@ -48,9 +49,11 @@ def get_bounding_boxes(
     best_boxes = []
     best_labels = []
     best_scores = []
+    best_masks = []
     for i, score in enumerate(scores):
         if score >= min_score:
             best_boxes.append(boxes[i])
+            best_masks.append(masks[i])
             best_labels.append(labels[i])
             best_scores.append(scores[i].item())
 
@@ -87,8 +90,9 @@ def get_bounding_boxes(
                 best_labels.pop(j)
                 best_scores.pop(j)
                 best_boxes.pop(j)
+                best_masks.pop(j)
 
-    return best_boxes, best_labels, best_scores
+    return best_boxes, best_labels, best_scores, best_masks
 
 
 def main(args: argparse.ArgumentParser) -> None:
@@ -227,7 +231,7 @@ if __name__ == "__main__":
     parser.add_argument("train_dataset", type=str, nargs="?", default="three-objects")
     parser.add_argument("min_score", type=float, nargs="?", default=0.75)
     parser.add_argument("test_img_num", type=float, nargs="?", default=12)
-    parser.add_argument("--experiment", "-e", type=str, default="test_3x1000_podruhe")
+    parser.add_argument("--experiment", "-e", type=str, default="test_3x1000_noise")
     args = parser.parse_args()
 
     main(args)
