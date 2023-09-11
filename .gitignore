@@ -8,5 +8,3 @@ __pycache__/
 /detector/train_on_bop_ycbv.py
 /bop.py
 /bop_challenge_eval/
-
-README.md
