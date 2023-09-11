@@ -133,6 +133,8 @@ class AddBackground(nn.Module):
     def forward(self, render, masks, all_masks, labels):
         backgrounds = os.listdir(BACKGROUNDS_PATH)
         background = np.random.choice(backgrounds)
+        while background == ".gitignore":
+            background = np.random.choice(backgrounds)
         background = Image.open(BACKGROUNDS_PATH / background)
         render = np.array(render)
 
@@ -143,9 +145,19 @@ class AddBackground(nn.Module):
 
 class ColorDistortion(nn.Module):
     def forward(self, image, masks, labels):
+
+        p = np.random.uniform(0, 1)
+        q = np.random.normal(scale=0.6)
+        
+        R = np.exp(q * p * np.random.choice([-1,1]))
+        B = np.exp(q * (1-p))
+
+        image[:,:,2] = np.clip(image[:,:,2] * float(B), 0, 255).astype(np.uint8)
+        image[:,:,0] = np.clip(image[:,:,0] * float(R), 0, 255).astype(np.uint8)
+
         image = Image.fromarray(image)
 
-        result = T.ColorJitter(brightness=0.7, contrast=0.5, saturation=0.5, hue=0.13)(
+        result = T.ColorJitter(brightness=0.5, contrast=0.25, saturation=0.5, hue=0.1)(
             image
         )
 
@@ -155,7 +167,7 @@ class ColorDistortion(nn.Module):
         result = result + np.random.uniform(0, 1) * torch.randn_like(result) * 0.03
 
         random_values = np.random.normal(0, 0.15, result.shape)
-        smoothing_iterations = np.random.randint(1, 10)
+        smoothing_iterations = np.random.randint(2, 10)
         for _ in range(smoothing_iterations):
             random_values = (
                 random_values
