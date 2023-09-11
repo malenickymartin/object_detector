@@ -23,10 +23,12 @@ class AddRenders(nn.Module):
         self,
         train_dataset: str,
         aug_dataset: str,
+        amodal: bool = False,
         max_train_objs: int = 3,
         max_aug_objs: int = 5,
     ):
         super().__init__()
+        self.amodal = amodal
         self.max_train_objs = max_train_objs
         self.max_aug_objs = max_aug_objs
         self.train_names = sorted(os.listdir(DATASET_PATH(train_dataset)))
@@ -40,7 +42,6 @@ class AddRenders(nn.Module):
         self.train_objects = []
 
         for object in self.train_names:
-            # Test if renders and masks dirs exist was already done in dataset init
             self.train_objects.append(
                 {
                     "label": object,
@@ -75,21 +76,21 @@ class AddRenders(nn.Module):
         mask = mask > 0
         all_masks = mask[:, :, None]
         masks = mask[None, :, :]
-        only_object_mask = mask > 0
         labels = [curr_obj_name]
 
-        data_objects = []
-        for object in self.train_objects:
-            if object["label"] != curr_obj_name:
-                data_objects.append(object)
+        train_objects = [
+            obj for obj in self.train_objects if obj["label"] != curr_obj_name
+        ]
 
         rand_train_objs = np.random.randint(
-            0, min(self.max_train_objs, len(data_objects)) + 1
+            0, min(self.max_train_objs, len(train_objects)) + 1
         )
         rand_aug_objs = np.random.randint(
             0, min(self.max_aug_objs, len(self.aug_objects)) + 1
         )
-        rand_train_objs = np.random.choice(data_objects, rand_train_objs, replace=False)
+        rand_train_objs = np.random.choice(
+            train_objects, rand_train_objs, replace=False
+        )
         rand_aug_objs = np.random.choice(self.aug_objects, rand_aug_objs, replace=False)
 
         for object in np.concatenate((rand_train_objs, rand_aug_objs)):
@@ -97,22 +98,33 @@ class AddRenders(nn.Module):
             new_render = np.array(Image.open(object["renders"][render_num]))
             new_mask = np.array(Image.open(object["masks"][render_num]))
             new_mask = new_mask > 0
-            ovelay_rate = np.sum(np.logical_and(only_object_mask, new_mask)) / np.sum(
-                only_object_mask
-            )
+
+            overlay_rates_train = np.array([
+                    np.sum(train_mask & new_mask) / np.sum(train_mask)
+                    for train_mask in masks])
+
+            overlay_rate_all = np.sum(all_masks[:,:,0] & new_mask) / np.sum(new_mask)
+
+            if object["label"] in self.train_names and overlay_rate_all > 0.5 and any(overlay_rates_train > 0.5):
+                continue
+
+            if (np.random.random() < 0.5 and overlay_rate_all < 0.5) or any(
+                overlay_rates_train > 0.5
+            ):
+                render = np.where(all_masks, render, new_render)
+                if not self.amodal:
+                    new_mask = np.where(new_mask, np.logical_not(all_masks[:,:,0]), False)
+            else:
+                render = np.where(new_mask[:,:,None], new_render, render)
+                if not self.amodal:
+                    for i in range(len(masks)):
+                        masks[i] = np.where(masks[i,:,:], np.logical_not(new_mask), False)
 
             if object["label"] in self.train_names:
                 masks = np.append(masks, new_mask[None, :, :], axis=0)
                 labels.append(object["label"])
-                only_object_mask = np.logical_or(only_object_mask, new_mask)
 
-            new_mask = new_mask[:, :, None]
-
-            if np.random.random() < 0.5 and ovelay_rate < 0.75:
-                render = np.where(new_mask, new_render, render)
-            else:
-                render = np.where(all_masks, render, new_render)
-            all_masks = np.logical_or(new_mask, all_masks)
+            all_masks = new_mask[:,:,None] | all_masks
 
         return render, masks, all_masks, labels
 
@@ -133,14 +145,14 @@ class ColorDistortion(nn.Module):
     def forward(self, image, masks, labels):
         image = Image.fromarray(image)
 
-        result = T.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.3, hue=0.125)(
+        result = T.ColorJitter(brightness=0.7, contrast=0.5, saturation=0.5, hue=0.13)(
             image
         )
 
-        result = T.GaussianBlur(kernel_size=5, sigma=(0.2, 2))(result)
+        result = T.GaussianBlur(kernel_size=5, sigma=(0.2, 1.5))(result)
 
         result = T.ToTensor()(result)
-        result = result + np.random.uniform(0, 1) * torch.randn_like(result) * 0.05
+        result = result + np.random.uniform(0, 1) * torch.randn_like(result) * 0.03
 
         random_values = np.random.normal(0, 0.15, result.shape)
         smoothing_iterations = np.random.randint(1, 10)
@@ -154,7 +166,7 @@ class ColorDistortion(nn.Module):
             ) / 5
         random_values = np.clip(random_values, -1, 1)
 
-        result = result + random_values * np.random.uniform(0, 1)
+        result = result + random_values * np.random.uniform(0, 0.5)
 
         result = torch.clip(result, 0, 1)
 

@@ -20,9 +20,9 @@ from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 
 
-def get_transform(train_dataset: str, aug_dataset: str) -> T.Compose:
+def get_transform(train_dataset: str, aug_dataset: str, amodal: bool) -> T.Compose:
     transforms = []
-    transforms.append(T.AddRenders(train_dataset, aug_dataset))
+    transforms.append(T.AddRenders(train_dataset, aug_dataset, amodal))
     transforms.append(T.AddBackground())
     transforms.append(T.ColorDistortion())
     transforms.append(T.ConvertImageDtype(torch.float))
@@ -44,13 +44,13 @@ def get_model_instance_segmentation(num_classes: int):
 def get_dataloaders(args: argparse.ArgumentParser, batch_size: int, num_classes: int):
     num_classes = num_classes-1
     dataset = Dataset(
-        args.train_dataset, get_transform(args.train_dataset, args.aug_dataset)
+        args.train_dataset, get_transform(args.train_dataset, args.aug_dataset, args.amodal)
     )
     dataset_test = Dataset(
-        args.train_dataset, get_transform(args.train_dataset, args.aug_dataset)
+        args.train_dataset, get_transform(args.train_dataset, args.aug_dataset, args.amodal)
     )
     indices = torch.randperm(len(dataset)).tolist()
-    assert num_classes*args.img_per_obj < len(dataset), "Requested number of images for training is bigger than size of dataset."
+    assert num_classes*args.img_per_obj <= len(dataset), f"Requested number of images {num_classes}*{args.img_per_obj}={num_classes*args.img_per_obj} for training is bigger than size of dataset {len(dataset)}."
     indices = indices[0:num_classes*args.img_per_obj]
     dataset = torch.utils.data.Subset(
         dataset, indices[: math.floor(TRAIN_TO_TEST_RATIO * len(indices))]
@@ -177,7 +177,6 @@ def main(args: argparse.ArgumentParser) -> None:
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=1,
-        max_epochs=num_epochs,
         default_root_dir=output_dir,
         logger=logger,
         callbacks=[checkpoint_callback],
@@ -190,9 +189,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("train_dataset", type=str, nargs="?", default="three-objects")
     parser.add_argument("aug_dataset", type=str, nargs="?", default="ycbv")
-    parser.add_argument("--batch_size", "-b", type=int, default=8)
-    parser.add_argument("--img_per_obj", "-i", type=int, default=1000)
-    parser.add_argument("--experiment", "-e", type=str, default="test_3x5000_2")
+    parser.add_argument("--batch_size", "-b", type=int, default=16)
+    parser.add_argument("--img_per_obj", "-i", type=int, default=5000)
+    parser.add_argument("--amodal", "-a", action="store_true")
+    parser.add_argument("--experiment", "-e", type=str, default="test_3x5000_modal_inf_epochs_2")
 
     args = parser.parse_args()
 
