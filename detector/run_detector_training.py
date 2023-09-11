@@ -159,7 +159,7 @@ class MaskRCNN(pl.LightningModule):
 def main(args: argparse.ArgumentParser) -> None:
     output_dir = MODEL_PATH(args.output_dir_name) / args.experiment
     output_dir.mkdir(exist_ok=True, parents=True)
-    num_epochs = 10
+    num_epochs = args.num_epochs
     batch_size = args.batch_size
 
     object_names = sorted(os.listdir(DATASET_PATH(args.train_dataset)))
@@ -177,6 +177,7 @@ def main(args: argparse.ArgumentParser) -> None:
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=1,
+        max_epochs=num_epochs,
         default_root_dir=output_dir,
         logger=logger,
         callbacks=[checkpoint_callback],
@@ -187,12 +188,13 @@ def main(args: argparse.ArgumentParser) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("train_dataset", type=str, nargs="?", default="three-objects")
-    parser.add_argument("aug_dataset", type=str, nargs="?", default="ycbv")
+    parser.add_argument("train_dataset", type=str, nargs="?", default="ycbv")
+    parser.add_argument("aug_dataset", type=str, nargs="?", default="augs")
     parser.add_argument("--batch_size", "-b", type=int, default=16)
-    parser.add_argument("--img_per_obj", "-i", type=int, default=5000)
+    parser.add_argument("--img_per_obj", "-i", type=int, default=1000)
+    parser.add_argument("--num_epochs", type=int, default=None)
     parser.add_argument("--amodal", "-a", action="store_true")
-    parser.add_argument("--experiment", "-e", type=str, default="test_3x5000_modal_inf_epochs_2")
+    parser.add_argument("--experiment", "-e", type=str, default="test_21x1000")
 
     args = parser.parse_args()
 
