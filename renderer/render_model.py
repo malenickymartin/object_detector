@@ -105,10 +105,10 @@ def make_output_visualization(args: argparse.ArgumentParser, object_name: str) -
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("dataset_name", type=str, nargs="?", default="three-objects")
-    parser.add_argument("--object_name", type=str, default=None)
     parser.add_argument("num_of_images", type=int, nargs="?", default=5000)
-    parser.add_argument("camera_res", type=list, nargs="?", default=[480, 640])
-    parser.add_argument("object_image_ratio", type=int, nargs="?", default=0.001)
+    parser.add_argument("--object_name", type=str, default=None)
+    parser.add_argument("--camera_res", type=list, default=[480, 640])
+    parser.add_argument("--object_image_ratio", type=int, default=0.001)
     args = parser.parse_args()
 
     if args.object_name == None:

@@ -49,6 +49,10 @@ def get_dataloaders(args: argparse.ArgumentParser, batch_size: int, num_classes:
     dataset_test = Dataset(
         args.train_dataset, get_transform(args.train_dataset, args.aug_dataset, args.amodal)
     )
+
+    if args.img_per_obj == None:
+        args.img_per_obj = math.floor(len(dataset)/num_classes)
+
     indices = torch.randperm(len(dataset)).tolist()
     assert num_classes*args.img_per_obj <= len(dataset), f"Requested number of images {num_classes}*{args.img_per_obj}={num_classes*args.img_per_obj} for training is bigger than size of dataset {len(dataset)}."
     indices = indices[0:num_classes*args.img_per_obj]
@@ -191,7 +195,7 @@ if __name__ == "__main__":
     parser.add_argument("train_dataset", type=str, nargs="?", default="ycbv")
     parser.add_argument("aug_dataset", type=str, nargs="?", default="augs")
     parser.add_argument("--batch_size", "-b", type=int, default=16)
-    parser.add_argument("--img_per_obj", "-i", type=int, default=1000)
+    parser.add_argument("--img_per_obj", "-i", type=int, default=None)
     parser.add_argument("--num_epochs", type=int, default=None)
     parser.add_argument("--amodal", "-a", action="store_true")
     parser.add_argument("--experiment", "-e", type=str, default="test_21x1000")
