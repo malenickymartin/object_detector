@@ -56,6 +56,8 @@ class AddRenders(nn.Module):
             ), f"Number of masks and renders dont match for object {object}."
 
         for object in self.aug_names:
+            if object == ".gitkeep":
+                continue
             if RENDERS_PATH(aug_dataset, object).is_dir():
                 self.aug_objects.append(
                     {
