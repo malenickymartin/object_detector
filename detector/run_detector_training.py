@@ -161,7 +161,7 @@ class MaskRCNN(pl.LightningModule):
 
 
 def main(args: argparse.ArgumentParser) -> None:
-    output_dir = MODEL_PATH(args.output_dir_name) / args.experiment
+    output_dir = MODEL_PATH(args.model_dir) / args.experiment
     output_dir.mkdir(exist_ok=True, parents=True)
     num_epochs = args.num_epochs
     batch_size = args.batch_size
@@ -193,7 +193,7 @@ def main(args: argparse.ArgumentParser) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("train_dataset", type=str, nargs="?", default="ycbv")
-    parser.add_argument("aug_dataset", type=str, nargs="?", default="augs")
+    parser.add_argument("--aug_dataset", type=str, nargs="?", default=None)
     parser.add_argument("--batch_size", "-b", type=int, default=16)
     parser.add_argument("--img_per_obj", "-i", type=int, default=None)
     parser.add_argument("--num_epochs", type=int, default=None)
@@ -202,6 +202,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    args.output_dir_name = f"train-{args.train_dataset}_aug-{args.aug_dataset}"
+    if args.aug_dataset == None:
+        args.aug_dataset = ".empty"
+        args.model_dir = f"train-{args.train_dataset}"
+    else:
+        args.model_dir = f"train-{args.train_dataset}_aug-{args.aug_dataset}"
 
     main(args)

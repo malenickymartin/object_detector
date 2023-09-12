@@ -4,27 +4,30 @@ This repository contains code for generating synthetic images using Panda 3D and
 
 ## Example
 
-This example will show complete process from rendering datasets and training model to running inference.
+This example will show you every necessery step from rendering datasets and training model to running inference.
 
 First you need to create two directories in "datasets" directory. One containing objects you want your detector to detect, second containing objects 
-used in augumentations. Note that even if you do not want to you augumentations, you must create the directory, but you can leav it empty.
+used for augumentations.
 You can see example directories, meshes and textures in "datasets/example-train" and "datasets/example-aug".
-
-The following command will create 25 renders and 25 masks, with default image size.
+The following command will create 25 renders without background and 25 masks, with default image size of 640x480.
 ```
 python3 -m renderer.render_model example-train 25
 ```
-Now make renders for the augumentation object.
+Now make renders for the augumentation object. If you do not want to use other objects as augumentations, skip this command.
 ```
 python3 -m renderer.render_model example-aug 25
 ```
 Next step is to start training the model. With the following command, the detector will train for 10 epochs with batch size 4 and the target 
-masks will be amodal. The model will be saved in "models/train-example-train_aug-example-aug/example-experiment".
+masks will be amodal. The model will be saved in "models/train-example-train_aug-example-aug/example-experiment". If you did not create 
+augumentation dataset in previous step, leave the second argument empty.
 ```
-python3 -m detector.run_detector_training example-train example-aug -b 4 --num_epochs=10 -a -e example_experiment
+python3 -m detector.run_detector_training example-train --aug_dataset=example-aug -b 4 --num_epochs=10 -a -e example_experiment
 ```
 
 If you want to see how well the detector has trained you can use the following commands to create random image and test it:
 ```
-python3 -m generate_random_synthetic_image
+python3 -m generate_random_synthetic_image example-train mustard --aug_dataset=example-aug
+python3 -m run_inference example-train --aug_dataset=example-aug -e example_experiment
 ```
+After these two commands, the direcotry "models/train-example-train_aug-example-aug" will contain 5 test images, their ground true masks and results 
+(masks predicted by detector).

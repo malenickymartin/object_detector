@@ -109,6 +109,7 @@ def main(args: argparse.ArgumentParser) -> None:
     transform = transforms.Compose([transforms.PILToTensor()])
 
     for img_idx in range(1, args.test_img_num + 1):
+        print(f"\nImage {img_idx}")
         image_path = MODEL_PATH(args.model_dir) / f"test{img_idx}.png"
         result_path = MODEL_PATH(args.model_dir)
 
@@ -225,13 +226,15 @@ def main(args: argparse.ArgumentParser) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "model_dir", type=str, nargs="?", default="train-three-objects_aug-ycbv"
-    )
-    parser.add_argument("train_dataset", type=str, nargs="?", default="three-objects")
-    parser.add_argument("min_score", type=float, nargs="?", default=0.75)
-    parser.add_argument("test_img_num", type=float, nargs="?", default=12)
+    parser.add_argument("train_dataset", type=str, nargs="?", default="ycbv")
+    parser.add_argument("--aug_dataset", type=str, nargs="?", default=None)
+    parser.add_argument("--min_score", type=float, nargs="?", default=0.75)
+    parser.add_argument("--test_img_num", type=float, nargs="?", default=5)
     parser.add_argument("--experiment", "-e", type=str, default="test_3x1000_noise")
     args = parser.parse_args()
 
+    if args.aug_dataset == None:
+        args.model_dir = f"train-{args.train_dataset}"
+    else:
+        args.model_dir = f"train-{args.train_dataset}_aug-{args.aug_dataset}"
     main(args)

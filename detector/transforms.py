@@ -133,7 +133,7 @@ class AddBackground(nn.Module):
     def forward(self, render, masks, all_masks, labels):
         backgrounds = os.listdir(BACKGROUNDS_PATH)
         background = np.random.choice(backgrounds)
-        while background == ".gitignore":
+        while background == ".gitkeep":
             background = np.random.choice(backgrounds)
         background = Image.open(BACKGROUNDS_PATH / background)
         render = np.array(render)
