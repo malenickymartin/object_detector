@@ -1,33 +1,51 @@
-# Synthetic data based object detector 
+# Synthetic Data Based Object Detector 
 
-This repository contains code for generating synthetic images using Panda 3D and 2D detector using torch as well as other usefull tools. The code is dependant on Happypose, pleas follow installation [here](https://github.com/agimus-project/happypose/tree/dev). Aim of this project is to create a 2D detector of seen objects, without need to create large labeled dataset by hand.
+This project is designed to help you create a 2D object detector for known objects without the need to manually label a large dataset. We achieve this by leveraging synthetic image generation using Panda 3D and implementing a 2D detector using PyTorch. Additionally, we provide various useful tools to streamline your workflow. The code is dependant on Happypose, please follow installation [here](https://github.com/agimus-project/happypose/tree/dev).
+
 
 ## Example
 
-This example will show you every necessery step from rendering datasets and training model to running inference.
+Let's walk through an example that covers every essential step, from rendering datasets and training the model to running inference. If you ever get lost or need to adjust file paths, see the `config.py` file.
 
-First you need to create two directories in "datasets" directory. One containing objects you want your detector to detect, second containing objects 
-used for augumentations.
-You can see example directories, meshes and textures in "datasets/example-train" and "datasets/example-aug".
-The following command will create 25 renders without background and 25 masks, with default image size of 640x480.
-```
+### Step 1: Set Up Your Datasets
+
+1. First, you'll need to create two directories within the `datasets` directory:
+   - The first directory should contain objects you want the detector to be trained on (eg. models from [YCBV](https://www.ycbbenchmarks.com/object-models/)).
+   - The second directory (optional) can contain objects used for augmentations. These augmentation objects will be added to training images and may partially cover your training objects, allowing the detector to detect partially covered objects. If you don't need augmentations, you can skip creating the second directory.
+You can find example directories, meshes, and textures in `datasets/example-train` and `datasets/example-aug`.
+2. Populate the `backgrounds` directory with various images (eg. dataset from [VOC](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/#devkit)) that will serve as backgrounds for the renders in the next step. The number of background images should roughly match (number of epochs) multiplied by (renders per epoch), so that each background is unique during training.
+
+### Step 2: Generate Synthetic Images
+
+Run the following command to generate 25 renders without a background and 25 masks (for better results, consider using a few hundred renders). The default image size is set to 640x480.
+
+```bash
 python3 -m renderer.render_model example-train 25
 ```
-Now make renders for the augumentation object. If you do not want to use other objects as augumentations, skip this command.
-```
+
+If you've created an augmentation dataset, run the following command to generate renders for augumentation objects:
+
+```bash
 python3 -m renderer.render_model example-aug 25
 ```
-Next step is to start training the model. With the following command, the detector will train for 10 epochs with batch size 4 and the target 
-masks will be amodal. The model will be saved in "models/train-example-train_aug-example-aug/example-experiment". If you did not create 
-augumentation dataset in previous step, leave the second argument empty.
-```
-python3 -m detector.run_detector_training example-train --aug_dataset=example-aug -b 4 --num_epochs=10 -a -e example_experiment
+
+
+### Step 3: Train Your Model
+
+It's time to train your object detection model. Execute the following command to train the detector for 10 epochs with a batch size of 4. The target masks will be amodal, and the model will be saved in `models/train-example-train_aug-example-aug/example-experiment`. If you didn't create an augmentation dataset, leave the second argument empty.
+
+```bash
+python3 -m detector.run_detector_training example-train --aug_dataset=example-aug --batch-size=4 --num_epochs=10 --amodal --experiment=example_experiment
 ```
 
-If you want to see how well the detector has trained you can use the following commands to create random image and test it:
-```
+### Step 4: Test Your Detector
+
+To evaluate how well your detector has trained, you can create a random image and test it with the following commands:
+
+```bash
 python3 -m generate_random_synthetic_image example-train mustard --aug_dataset=example-aug
-python3 -m run_inference example-train --aug_dataset=example-aug -e example_experiment
+python3 -m run_inference example-train --aug_dataset=example-aug --experiment=example_experiment
 ```
-After these two commands, the direcotry "models/train-example-train_aug-example-aug" will contain 5 test images, their ground true masks and results 
-(masks predicted by detector).
+
+After running these commands, you'll find test images, their ground truth masks, and the results (masks predicted by the detector) in the `models/train-example-train_aug-example-aug` directory.
+

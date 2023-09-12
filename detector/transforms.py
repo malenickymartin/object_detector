@@ -32,7 +32,12 @@ class AddRenders(nn.Module):
         self.max_train_objs = max_train_objs
         self.max_aug_objs = max_aug_objs
         self.train_names = sorted(os.listdir(DATASET_PATH(train_dataset)))
-        self.aug_names = sorted(os.listdir(DATASET_PATH(aug_dataset)))
+        
+        if aug_dataset == None:
+            self.aug_names = []
+        else:
+            self.aug_names = sorted(os.listdir(DATASET_PATH(aug_dataset)))
+
 
         assert set(self.train_names).isdisjoint(
             self.aug_names
@@ -56,8 +61,6 @@ class AddRenders(nn.Module):
             ), f"Number of masks and renders dont match for object {object}."
 
         for object in self.aug_names:
-            if object == ".gitkeep":
-                continue
             if RENDERS_PATH(aug_dataset, object).is_dir():
                 self.aug_objects.append(
                     {
@@ -132,11 +135,12 @@ class AddRenders(nn.Module):
 
 
 class AddBackground(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.backgrounds = os.listdir(BACKGROUNDS_PATH)
+
     def forward(self, render, masks, all_masks, labels):
-        backgrounds = os.listdir(BACKGROUNDS_PATH)
-        background = np.random.choice(backgrounds)
-        while background == ".gitkeep":
-            background = np.random.choice(backgrounds)
+        background = np.random.choice(self.backgrounds)
         background = Image.open(BACKGROUNDS_PATH / background)
         render = np.array(render)
 

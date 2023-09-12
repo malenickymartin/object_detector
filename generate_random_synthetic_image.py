@@ -21,7 +21,7 @@ def main(args):
     dataset_name = args.train_dataset
     augs_dataset = args.aug_dataset
     object_name = args.object_name
-    model_folder = args.model_folder
+    model_dir = args.model_dir
     amodal = args.amodal
 
     for i in range(1,args.num_images+1):
@@ -39,10 +39,10 @@ def main(args):
         transform = TorchTransforms.ToPILImage()
         img = transform(img)
 
-        img.save(MODEL_PATH(model_folder) / result_image_name)
+        img.save(MODEL_PATH(model_dir) / result_image_name)
 
         for j, mask in enumerate(masks):
-            Image.fromarray(mask).save(MODEL_PATH(model_folder) / f"mask-{i}_{j}.png")
+            Image.fromarray(mask).save(MODEL_PATH(model_dir) / f"mask-{i}_{j}.png")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -55,6 +55,8 @@ if __name__ == "__main__":
 
     if args.aug_dataset == None:
         args.aug_dataset = ".empty"
-    args.model_folder = f"train-{args.train_dataset}_aug-{args.aug_dataset}"
+        args.model_dir = f"train-{args.train_dataset}"
+    else:
+        args.model_dir = f"train-{args.train_dataset}_aug-{args.aug_dataset}"
 
     main(args)
