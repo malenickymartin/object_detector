@@ -12,8 +12,6 @@ cd object_detector
 pip install -r requirements.txt
 ```
 
-Ensure that Happypose is properly configured before running these commands.
-
 
 ## Example
 
