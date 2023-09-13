@@ -194,7 +194,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("train_dataset", type=str, nargs="?", default="ycbv")
     parser.add_argument("--aug_dataset", type=str, nargs="?", default=None)
-    parser.add_argument("--batch_size", "-b", type=int, default=16)
+    parser.add_argument("--batch-size", "-b", type=int, default=16)
     parser.add_argument("--img_per_obj", "-i", type=int, default=None)
     parser.add_argument("--num_epochs", type=int, default=None)
     parser.add_argument("--amodal", "-a", action="store_true")

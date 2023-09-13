@@ -7,8 +7,10 @@ from functools import partial
 
 
 def generate_object_transform(object_name: str, camera: dict) -> dict:
-    a = np.random.uniform(0, camera["resolution"][1])
-    b = np.random.uniform(0, camera["resolution"][0])
+    cam_w_delta = round(2.5*camera["resolution"][1]/100)
+    cam_h_delta = round(2.5*camera["resolution"][0]/100)
+    a = np.random.uniform(cam_w_delta, camera["resolution"][1] - cam_w_delta)
+    b = np.random.uniform(cam_h_delta, camera["resolution"][0] - cam_h_delta)
     z = np.random.uniform(0.2, 2)
 
     cx = camera["K"][0][2]

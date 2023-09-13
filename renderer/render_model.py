@@ -3,6 +3,7 @@ import argparse
 import os
 import numpy as np
 from PIL import Image
+import json
 
 # HappyPose
 from happypose.toolbox.datasets.object_dataset import RigidObject, RigidObjectDataset
@@ -47,7 +48,7 @@ def make_output_visualization(args: argparse.ArgumentParser, object_name: str) -
 
     for render_num in range(args.num_of_images):
         for attempt in range(10):
-            camera = generate_camera(args.camera_res)
+            camera = generate_camera(json.dumps(args.camera_res))
             object_transform = generate_object_transform(object_name, camera)
 
             camera = CameraData.from_json(camera)
@@ -74,15 +75,22 @@ def make_output_visualization(args: argparse.ArgumentParser, object_name: str) -
             )[0]
 
             if (
-                np.sum(renderings.binary_mask) / np.prod(camera.resolution)
-                <= args.object_image_ratio
+                np.sum(
+                    [
+                        np.sum(renderings.binary_mask[0, :]),
+                        np.sum(renderings.binary_mask[:, 0]),
+                        np.sum(renderings.binary_mask[:, -1]),
+                        np.sum(renderings.binary_mask[-1, :]),
+                    ]
+                )
+                > 0
             ):
                 print(
-                    f"Image number {render_num} not saved! Object took only {np.sum(renderings.binary_mask)/np.prod(camera.resolution)*100} % of frame."
+                    f"Image number {render_num} not saved! Object was on the edge of image."
                 )
                 assert (
-                    attempt < 9
-                ), "Object was not visible (or was too small) on 10 renders in row. Consider changing distance from camera range in data_generator.py"
+                    attempt < 20
+                ), "Object was on edge of image 10 renders in row. Consider changing padding in data_generator.py"
                 continue
 
             render = Image.fromarray(renderings.rgb, "RGB")
@@ -104,17 +112,16 @@ def make_output_visualization(args: argparse.ArgumentParser, object_name: str) -
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("dataset_name", type=str, nargs="?", default="three-objects")
-    parser.add_argument("num_of_images", type=int, nargs="?", default=5000)
+    parser.add_argument("dataset_name", type=str, nargs="?", default="ycbv")
+    parser.add_argument("num_of_images", type=int, nargs="?", default=1000)
     parser.add_argument("--object_name", type=str, default=None)
     parser.add_argument("--camera_res", type=list, default=[480, 640])
-    parser.add_argument("--object_image_ratio", type=int, default=0.001)
     args = parser.parse_args()
 
     if args.object_name == None:
         object_names = sorted(os.listdir(DATASET_PATH(args.dataset_name)))
     else:
-        object_names = [args.object_name]
+        object_names = args.object_name.split(",")
 
     for object in object_names:
         RENDERS_PATH(args.dataset_name, object).mkdir(exist_ok=True)

@@ -111,9 +111,9 @@ def main(args: argparse.ArgumentParser) -> None:
     test_imgs = [im.name for im in list(MODEL_PATH(args.model_dir).iterdir()) if (im.suffix == ".png" and im.name[0:4] == "test")]
     test_imgs.sort(key=lambda x: int(x.split(".")[0][4:]))
 
-    for img_idx, img_name in enumerate(test_imgs):
+    for img_idx in range(1, len(test_imgs)+1):
         print(f"\nImage {img_idx}")
-        image_path = MODEL_PATH(args.model_dir) / img_name
+        image_path = MODEL_PATH(args.model_dir) / test_imgs[img_idx-1]
         result_path = MODEL_PATH(args.model_dir)
 
         with open(image_path, "rb") as f:
@@ -232,7 +232,7 @@ if __name__ == "__main__":
     parser.add_argument("train_dataset", type=str, nargs="?", default="ycbv")
     parser.add_argument("--aug_dataset", type=str, nargs="?", default=None)
     parser.add_argument("--min_score", type=float, nargs="?", default=0.75)
-    parser.add_argument("--experiment", "-e", type=str, default="test_21x100")
+    parser.add_argument("--experiment", "-e", type=str, default="test_21x1000_renders-uncut_const-as-before")
     args = parser.parse_args()
 
     if args.aug_dataset == None:

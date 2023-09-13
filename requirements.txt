@@ -1,0 +1,2 @@
+pytorch-lightning
+torchvision==0.15.1

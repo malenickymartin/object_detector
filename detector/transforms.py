@@ -146,28 +146,27 @@ class AddBackground(nn.Module):
 
         background = background.resize(render.shape[:2][::-1])
         result = np.where(all_masks, render, background)
+
+
+
         return result, masks, labels
 
 
 class ColorDistortion(nn.Module):
     def forward(self, image, masks, labels):
-
-        p = np.random.uniform(0, 1)
-        q = np.random.normal(scale=0.6)
         
-        R = np.exp(q * p * np.random.choice([-1,1]))
-        B = np.exp(q * (1-p))
+        q = np.clip(np.random.normal(loc=1, scale=0.4), 0.5, 2.0)
 
-        image[:,:,2] = np.clip(image[:,:,2] * float(B), 0, 255).astype(np.uint8)
-        image[:,:,0] = np.clip(image[:,:,0] * float(R), 0, 255).astype(np.uint8)
+        image[:,:,2] = np.clip(image[:,:,2] * q, 0, 255).astype(np.uint8)
 
         image = Image.fromarray(image)
 
-        result = T.ColorJitter(brightness=0.5, contrast=0.25, saturation=0.5, hue=0.1)(
+        result = T.ColorJitter(brightness=0.5, contrast=0.25, saturation=0.5, hue=0.07)(
             image
         )
 
-        result = T.GaussianBlur(kernel_size=5, sigma=(0.2, 1.5))(result)
+        result = T.GaussianBlur(kernel_size=3, sigma=0.75)(result)
+        result = T.GaussianBlur(kernel_size=5, sigma=(0.1, 1.0))(result)
 
         result = T.ToTensor()(result)
         result = result + np.random.uniform(0, 1) * torch.randn_like(result) * 0.03
@@ -187,7 +186,7 @@ class ColorDistortion(nn.Module):
         result = result + random_values * np.random.uniform(0, 0.5)
 
         result = torch.clip(result, 0, 1)
-
+        
         return result, masks, labels
 
 
