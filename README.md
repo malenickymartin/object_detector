@@ -1,6 +1,18 @@
 # Synthetic Data Based Object Detector 
 
-This project is designed to help you create a 2D object detector for known objects without the need to manually label a large dataset. We achieve this by leveraging synthetic image generation using Panda 3D and implementing a 2D detector using PyTorch. Additionally, we provide various useful tools to streamline your workflow. The code is dependant on Happypose, please follow installation [here](https://github.com/agimus-project/happypose/tree/dev).
+This project is designed to help you create a 2D object detector for known objects without the need to manually label a large dataset. We achieve this by leveraging synthetic image generation using Panda 3D and implementing a 2D detector using PyTorch. Additionally, we provide various useful tools to streamline your workflow. 
+
+## Installation
+Before proceeding with the installation, make sure you have Happypose installed. If you haven't already, you can follow the installation instructions [here](https://github.com/agimus-project/happypose/tree/dev).
+Once Happypose is successfully installed, you can continue with the following commands:
+```
+conda activate happypose
+git clone git@github.com:malenickymartin/object_detector.git
+cd object_detector
+pip install -r requirements.txt
+```
+
+Ensure that Happypose is properly configured before running these commands.
 
 
 ## Example
@@ -17,16 +29,16 @@ You can find example directories, meshes, and textures in `datasets/example-trai
 
 ### Step 2: Generate Synthetic Images
 
-Run the following command to generate 25 renders without a background and 25 masks (for better results, consider using a few hundred renders). The default image size is set to 640x480.
+Run the following command to generate 100 renders without a background and 100 masks (for better results, consider using a few hundred renders). The default image size is set to 640x480.
 
 ```bash
-python3 -m renderer.render_model example-train 25
+python3 -m renderer.render_model example-train 100
 ```
 
 If you've created an augmentation dataset, run the following command to generate renders for augumentation objects:
 
 ```bash
-python3 -m renderer.render_model example-aug 25
+python3 -m renderer.render_model example-aug 100
 ```
 
 

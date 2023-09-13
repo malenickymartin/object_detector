@@ -48,10 +48,10 @@ def make_output_visualization(args: argparse.ArgumentParser, object_name: str) -
 
     for render_num in range(args.num_of_images):
         for attempt in range(10):
-            camera = generate_camera(json.dumps(args.camera_res))
+            camera = generate_camera(args.camera_res)
             object_transform = generate_object_transform(object_name, camera)
 
-            camera = CameraData.from_json(camera)
+            camera = CameraData.from_json(json.dumps(camera))
             camera.TWC = Transform(np.eye(4))
             camera = Panda3dCameraData(
                 TWC=camera.TWC, K=camera.K, resolution=camera.resolution
