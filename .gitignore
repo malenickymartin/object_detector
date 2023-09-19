@@ -6,5 +6,8 @@ __pycache__/
 /datasets/
 
 /detector/train_on_bop_ycbv.py
-/bop.py
 /bop_challenge_eval/
+/cctextures
+/renderer/main_custom_random.py
+/renderer/object_loader.py
+/detector/run_detector_training_bp.py

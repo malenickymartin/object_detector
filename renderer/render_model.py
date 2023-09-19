@@ -20,13 +20,15 @@ from renderer.data_generator import (
     generate_lights,
 )
 
-from config import RENDERS_PATH, MASKS_PATH, MESH_PATH, DATASET_PATH
+from config import RENDERS_PATH, MASKS_PATH, MESH_PATH, DATASET_PATH, OBJECT_PATH
 
 
 def make_object_dataset(dataset_name: str, object_name: str) -> RigidObjectDataset:
     rigid_objects = []
     mesh_units = "mm"
     object_dir = MESH_PATH(dataset_name, object_name)
+    if not object_dir.is_dir():
+        object_dir = OBJECT_PATH(dataset_name, object_name)
     label = object_name
     mesh_path = None
     for fn in object_dir.glob("*"):

@@ -69,6 +69,7 @@ def get_dataloaders(args: argparse.ArgumentParser, batch_size: int, num_classes:
         shuffle=True,
         num_workers=8,
         collate_fn=utils.collate_fn,
+        worker_init_fn=lambda: torch.multiprocessing.set_sharing_strategy('file_system')
     )
     data_loader_test = torch.utils.data.DataLoader(
         dataset_test,
@@ -76,6 +77,7 @@ def get_dataloaders(args: argparse.ArgumentParser, batch_size: int, num_classes:
         shuffle=False,
         num_workers=8,
         collate_fn=utils.collate_fn,
+        worker_init_fn=lambda: torch.multiprocessing.set_sharing_strategy('file_system')
     )
 
     return data_loader, data_loader_test
@@ -152,7 +154,7 @@ class MaskRCNN(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(
-            self.parameters(), lr=0.005, momentum=0.9, weight_decay=0.0005
+            self.parameters(), lr=0.02, momentum=0.9, weight_decay=0.0001
         )
         lr_scheduler = torch.optim.lr_scheduler.StepLR(
             optimizer, step_size=3, gamma=0.1
@@ -201,6 +203,8 @@ if __name__ == "__main__":
     parser.add_argument("--experiment", "-e", type=str, default="test_21x1000")
 
     args = parser.parse_args()
+
+    torch.multiprocessing.set_sharing_strategy('file_system')
 
     if args.aug_dataset == None:
         args.aug_dataset = ".empty"

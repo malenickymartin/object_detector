@@ -7,11 +7,11 @@ from functools import partial
 
 
 def generate_object_transform(object_name: str, camera: dict) -> dict:
-    cam_w_delta = round(2.5*camera["resolution"][1]/100)
-    cam_h_delta = round(2.5*camera["resolution"][0]/100)
+    cam_w_delta = round(25*camera["resolution"][1]/100)
+    cam_h_delta = round(25*camera["resolution"][0]/100)
     a = np.random.uniform(cam_w_delta, camera["resolution"][1] - cam_w_delta)
     b = np.random.uniform(cam_h_delta, camera["resolution"][0] - cam_h_delta)
-    z = np.random.uniform(0.2, 2)
+    z = np.random.uniform(0.6, 1.5)
 
     cx = camera["K"][0][2]
     cy = camera["K"][1][2]
@@ -47,19 +47,20 @@ def generate_lights() -> list[Panda3dLightData]:
         light_node.setPos(tuple(xyz_.tolist()))
         return
 
-    rand_amb_lgt = np.random.normal(0.7, 0.2)
+    rand_amb_lgt = np.random.normal(0.7, 0.05)
     rand_amb_col = np.random.normal(0, 0.05, 3)
-    rand_amb_col = rand_amb_lgt * (1 + rand_amb_col)
+    rand_amb_col = rand_amb_lgt + rand_amb_col
     rand_amb_col = np.clip(rand_amb_col, 0, 1.5)
     rand_amb_col = tuple(np.append(rand_amb_col, 1))
 
-    rand_point_lgt = np.random.normal(0.15, 0.1)
-    rand_point_col = np.random.normal(0, 0.05, 3)
-    rand_point_col = rand_point_lgt * (1 + rand_point_col)
+    rand_point_lgt = np.random.normal(0.1, 0.01)
+    rand_point_col = np.random.uniform(-0.3, 0.3, size=3)
+    rand_point_col = rand_point_lgt  + rand_point_col
     rand_point_col = np.clip(rand_point_col, 0, 1.5)
     rand_point_col = tuple(np.append(rand_point_col, 1))
 
-    rand_pos = np.random.uniform(-2, 2, size=3)
+    rand_pos = np.random.uniform(-1,1, size=3)
+    rand_pos /= np.linalg.norm(rand_pos, axis=0)
 
     pos_fn_ = partial(pos_fn, pos=rand_pos)
 

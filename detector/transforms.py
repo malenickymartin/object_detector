@@ -155,21 +155,23 @@ class AddBackground(nn.Module):
 class ColorDistortion(nn.Module):
     def forward(self, image, masks, labels):
         
-        q = np.clip(np.random.normal(loc=1, scale=0.4), 0.5, 2.0)
+        q = np.clip(np.random.normal(loc=1, scale=0.2), 0.57, 1.75) # 0.4), 0.5 2.0
 
         image[:,:,2] = np.clip(image[:,:,2] * q, 0, 255).astype(np.uint8)
 
-        image = Image.fromarray(image)
+        result = Image.fromarray(image)
 
-        result = T.ColorJitter(brightness=0.5, contrast=0.25, saturation=0.5, hue=0.07)(
-            image
+        result = T.RandomPosterize(np.random.randint(4,8), 1)(result)
+
+        result = T.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.05)( # 0.5 0.25 0.5 0.07
+            result
         )
 
         result = T.GaussianBlur(kernel_size=3, sigma=0.75)(result)
-        result = T.GaussianBlur(kernel_size=5, sigma=(0.1, 1.0))(result)
+        result = T.GaussianBlur(kernel_size=5, sigma=(0.1, 0.6))(result) #(0.1, 1.0)
 
         result = T.ToTensor()(result)
-        result = result + np.random.uniform(0, 1) * torch.randn_like(result) * 0.03
+        result = result + np.random.uniform(0, 1) * torch.randn_like(result) * 0.025 #0.03
 
         random_values = np.random.normal(0, 0.15, result.shape)
         smoothing_iterations = np.random.randint(2, 10)
@@ -183,7 +185,7 @@ class ColorDistortion(nn.Module):
             ) / 5
         random_values = np.clip(random_values, -1, 1)
 
-        result = result + random_values * np.random.uniform(0, 0.5)
+        result = result + random_values * np.random.uniform(0, 0.05)
 
         result = torch.clip(result, 0, 1)
         

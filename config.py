@@ -36,6 +36,7 @@ def RENDERS_PATH(dataset_name : str, object_name : str) -> Path:
 def MASKS_PATH(dataset_name : str, object_name : str) -> Path:
     return OBJECT_PATH(dataset_name, object_name) / "masks"
 
-#This directory contains two files. First is mesh file. This file is either ".obj" or ".ply". The second file is image of a texture corresponding to the mesh.
+#This directory contains mesh file. This file is either ".obj" or ".ply".
+# You can also use "OBJECT_PATH" to store your mesh
 def MESH_PATH(dataset_name : str, object_name : str) -> Path:
     return OBJECT_PATH(dataset_name, object_name) / "meshes"
