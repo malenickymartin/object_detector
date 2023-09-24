@@ -1,7 +1,7 @@
 ply
 format ascii 1.0
 comment VCGLIB generated
-comment TextureFile obj_000002.png
+comment TextureFile obj_000001.png
 element vertex 10983
 property float x
 property float y

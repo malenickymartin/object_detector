@@ -119,9 +119,9 @@ def main(args: argparse.ArgumentParser) -> None:
     test_imgs = [
         im.name
         for im in list(MODEL_PATH(args.model_dir).iterdir())
-        if (im.suffix == ".png" and im.name[0:4] == "test")
+        if (im.suffix == ".png" and im.name[0:7] == "synt_im")
     ]
-    test_imgs.sort(key=lambda x: int(x.split(".")[0][4:]))
+    test_imgs.sort(key=lambda x: int(x.split(".")[0][8:]))
 
     for img_idx in range(1, len(test_imgs) + 1):
         print(f"\nImage {img_idx}")

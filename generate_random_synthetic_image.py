@@ -5,6 +5,7 @@ from PIL import Image
 from tqdm import tqdm
 from config import (
     DATASET_PATH,
+    MODEL_PATH
 )
 
 transforms = A.Compose(
@@ -29,13 +30,13 @@ def main(args):
         img = transformed["image"]
 
         img = Image.fromarray(img)
-        img.save(DATASET_PATH(args.dataset) / f"synt_im_{i}.png")
-    print(f"All images were successfully saved to: {DATASET_PATH(args.dataset)}/synt_im_x.png")
+        img.save(MODEL_PATH("train-"+args.dataset) / f"synt_im_{i}.png")
+    print(f"All images were successfully saved to: train-{DATASET_PATH(args.dataset)}/synt_im_x.png")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("dataset", type=str, nargs="?", default="ycbv")
-    parser.add_argument("num-images", type=int, nargs="?", default=1)
+    parser.add_argument("num_images", type=int, nargs="?", default=1)
     args = parser.parse_args()
 
     main(args)

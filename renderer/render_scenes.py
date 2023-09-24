@@ -238,4 +238,4 @@ for i in range(args.num_scenes):
         obj.disable_rigidbody()
         obj.hide(True)
     
-    print(f"Rendering of scene {i}/{args.num_scenes} finished.")
+    print(f"Rendering of scene {i+1}/{args.num_scenes} finished.")

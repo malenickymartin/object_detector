@@ -139,7 +139,7 @@ class MaskRCNN(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(
-            self.parameters(), lr=0.03, momentum=0.9, weight_decay=0.0001
+            self.parameters(), lr=0.005, momentum=0.9, weight_decay=0.0001
         )
         lr_scheduler = torch.optim.lr_scheduler.StepLR(
             optimizer, step_size=3, gamma=0.5
