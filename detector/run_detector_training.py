@@ -9,25 +9,13 @@ import lightning.pytorch as pl
 from lightning.pytorch.loggers import CSVLogger
 from lightning.pytorch.callbacks import ModelCheckpoint
 
-from config import DATASET_PATH, MODEL_PATH
-
-from detector import transforms as T
-from detector.dataset import Dataset
+from config import MODEL_PATH, MESH_PATH
 from detector import utils
+from detector.dataset import Dataset
 
 import torchvision
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
-
-
-def get_transform(train_dataset: str, aug_dataset: str, amodal: bool) -> T.Compose:
-    transforms = []
-    transforms.append(T.AddRenders(train_dataset, aug_dataset, amodal))
-    transforms.append(T.AddBackground())
-    transforms.append(T.ColorDistortion())
-    transforms.append(T.ConvertImageDtype(torch.float))
-    return T.Compose(transforms)
-
 
 def get_model_instance_segmentation(num_classes: int):
     model = torchvision.models.detection.maskrcnn_resnet50_fpn(weights="DEFAULT")
@@ -41,21 +29,19 @@ def get_model_instance_segmentation(num_classes: int):
     return model
 
 
-def get_dataloaders(args: argparse.ArgumentParser, batch_size: int, num_classes: int):
-    num_classes = num_classes-1
-    dataset = Dataset(
-        args.train_dataset, get_transform(args.train_dataset, args.aug_dataset, args.amodal)
-    )
-    dataset_test = Dataset(
-        args.train_dataset, get_transform(args.train_dataset, args.aug_dataset, args.amodal)
-    )
-
-    if args.img_per_obj == None:
-        args.img_per_obj = math.floor(len(dataset)/num_classes)
+def get_dataloaders(args: argparse.ArgumentParser, batch_size: int):
+    print("Making dataset.")
+    dataset = Dataset(args.train_dataset)
+    print("Making validation dataset.")
+    dataset_test = Dataset(args.train_dataset)
 
     indices = torch.randperm(len(dataset)).tolist()
-    assert num_classes*args.img_per_obj <= len(dataset), f"Requested number of images {num_classes}*{args.img_per_obj}={num_classes*args.img_per_obj} for training is bigger than size of dataset {len(dataset)}."
-    indices = indices[0:num_classes*args.img_per_obj]
+
+    if args.train_imgs == None:
+        args.train_imgs = len(dataset)
+
+    indices = indices[0:args.train_imgs]
+    print("Making subsets.")
     dataset = torch.utils.data.Subset(
         dataset, indices[: math.floor(TRAIN_TO_TEST_RATIO * len(indices))]
     )
@@ -63,13 +49,13 @@ def get_dataloaders(args: argparse.ArgumentParser, batch_size: int, num_classes:
         dataset_test,
         indices[-math.ceil((1 - TRAIN_TO_TEST_RATIO) * len(indices)) + 1 :],
     )
+    print("Making dataloaders.")
     data_loader = torch.utils.data.DataLoader(
         dataset,
         batch_size=batch_size,
         shuffle=True,
         num_workers=8,
         collate_fn=utils.collate_fn,
-        worker_init_fn=lambda: torch.multiprocessing.set_sharing_strategy('file_system')
     )
     data_loader_test = torch.utils.data.DataLoader(
         dataset_test,
@@ -77,7 +63,6 @@ def get_dataloaders(args: argparse.ArgumentParser, batch_size: int, num_classes:
         shuffle=False,
         num_workers=8,
         collate_fn=utils.collate_fn,
-        worker_init_fn=lambda: torch.multiprocessing.set_sharing_strategy('file_system')
     )
 
     return data_loader, data_loader_test
@@ -154,10 +139,10 @@ class MaskRCNN(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(
-            self.parameters(), lr=0.02, momentum=0.9, weight_decay=0.0001
+            self.parameters(), lr=0.03, momentum=0.9, weight_decay=0.0001
         )
         lr_scheduler = torch.optim.lr_scheduler.StepLR(
-            optimizer, step_size=3, gamma=0.1
+            optimizer, step_size=3, gamma=0.5
         )
         return {"optimizer": optimizer, "lr_scheduler": lr_scheduler}
 
@@ -168,10 +153,14 @@ def main(args: argparse.ArgumentParser) -> None:
     num_epochs = args.num_epochs
     batch_size = args.batch_size
 
-    object_names = sorted(os.listdir(DATASET_PATH(args.train_dataset)))
-    num_classes = len(object_names) + 1
+    num_classes = 1
+    for f in os.listdir(MESH_PATH(args.train_dataset)):
+        if f.endswith(".ply") or f.endswith(".obj"):
+            num_classes += 1
 
-    data_loader, data_loader_test = get_dataloaders(args, batch_size, num_classes)
+    data_loader, data_loader_test = get_dataloaders(args, batch_size)
+
+    next(iter(data_loader))
 
     logger = CSVLogger(output_dir, name="", version="")
 
@@ -194,22 +183,16 @@ def main(args: argparse.ArgumentParser) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("train_dataset", type=str, nargs="?", default="ycbv")
-    parser.add_argument("--aug_dataset", type=str, nargs="?", default=None)
-    parser.add_argument("--batch-size", "-b", type=int, default=16)
-    parser.add_argument("--img_per_obj", "-i", type=int, default=None)
-    parser.add_argument("--num_epochs", type=int, default=None)
-    parser.add_argument("--amodal", "-a", action="store_true")
-    parser.add_argument("--experiment", "-e", type=str, default="test_21x1000")
+    parser.add_argument("train_dataset", type=str, nargs="?", default="example-train")
+    parser.add_argument("--batch-size", "-b", type=int, default=6)
+    parser.add_argument("--train-imgs", "-i", type=int, default=None)
+    parser.add_argument("--num-epochs", "-n", type=int, default=10)
+    parser.add_argument("--experiment", "-e", type=str, default="")
 
     args = parser.parse_args()
 
     torch.multiprocessing.set_sharing_strategy('file_system')
 
-    if args.aug_dataset == None:
-        args.aug_dataset = ".empty"
-        args.model_dir = f"train-{args.train_dataset}"
-    else:
-        args.model_dir = f"train-{args.train_dataset}_aug-{args.aug_dataset}"
+    args.model_dir = f"train-{args.train_dataset}"
 
     main(args)

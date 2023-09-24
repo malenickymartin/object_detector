@@ -1,62 +1,41 @@
-from detector import transforms as T
-from torchvision.transforms import transforms as TorchTransforms
-import os
 import numpy as np
 import argparse
+import albumentations as A
 from PIL import Image
+from tqdm import tqdm
 from config import (
-    RENDERS_PATH,
-    MASKS_PATH,
-    MODEL_PATH
+    DATASET_PATH,
 )
 
-def get_transform(object_name: str, augs_dataset: str, amodal: bool):
-    transforms = []
-    transforms.append(T.AddRenders(object_name, augs_dataset, amodal))
-    transforms.append(T.AddBackground())
-    transforms.append(T.ColorDistortion())
-    return T.Compose(transforms)
+transforms = A.Compose(
+            [
+                A.Flip(p=0.5),
+                A.Blur(blur_limit=(3,5), p=0.25),
+                A.CLAHE(clip_limit=(1,2), p=0.125),
+                A.Downscale(scale_min=0.5, scale_max=0.99, interpolation=1, p=0.125),
+                A.ISONoise(color_shift=(0,0.2), intensity=(0.1,1), p=0.25),
+                A.RandomBrightnessContrast(brightness_limit=(-0.1,0.25), contrast_limit=(-0.1,0.25), p=0.5),
+            ],
+            p=0.95
+        )
 
 def main(args):
-    dataset_name = args.train_dataset
-    augs_dataset = args.aug_dataset
-    object_name = args.object_name
-    model_dir = args.model_dir
-    amodal = args.amodal
 
-    for i in range(1,args.num_images+1):
-        result_image_name = "test"+str(i)+".png"
+    for i in tqdm(range(1,args.num_images+1)):
+        rand_scene = np.random.choice(list((DATASET_PATH(args.dataset) / "train_pbr").iterdir()))
+        image_path = np.random.choice(list((rand_scene / "rgb").iterdir()))
+        img = Image.open(image_path)
+        transformed = transforms(image=np.array(img))
+        img = transformed["image"]
 
-        transforms = get_transform(dataset_name, augs_dataset, amodal)
-        images_list = os.listdir(RENDERS_PATH(dataset_name, object_name))
-        image_num = np.random.randint(0, len(images_list))
-        print(f"Image number {image_num}")
-        img = np.array(Image.open(RENDERS_PATH(dataset_name, object_name) / f"render{image_num}.png").convert("RGB"))
-        mask = np.array(Image.open(MASKS_PATH(dataset_name, object_name) / f"mask{image_num}.png"))
-
-        img, masks, _ = transforms(img, mask, object_name)
-
-        transform = TorchTransforms.ToPILImage()
-        img = transform(img)
-
-        img.save(MODEL_PATH(model_dir) / result_image_name)
-
-        for j, mask in enumerate(masks):
-            Image.fromarray(mask).save(MODEL_PATH(model_dir) / f"mask-{i}_{j}.png")
+        img = Image.fromarray(img)
+        img.save(DATASET_PATH(args.dataset) / f"synt_im_{i}.png")
+    print(f"All images were successfully saved to: {DATASET_PATH(args.dataset)}/synt_im_x.png")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("train_dataset", type=str, nargs="?", default="ycbv")
-    parser.add_argument("object_name", type=str, nargs="?", default="sugar")
-    parser.add_argument("num_images", type=int, nargs="?", default=5)
-    parser.add_argument("--aug_dataset", type=str, nargs="?", default=None)
-    parser.add_argument("--amodal", "-a", action="store_true")
+    parser.add_argument("dataset", type=str, nargs="?", default="ycbv")
+    parser.add_argument("num-images", type=int, nargs="?", default=1)
     args = parser.parse_args()
-
-    if args.aug_dataset == None:
-        args.aug_dataset = ".empty"
-        args.model_dir = f"train-{args.train_dataset}"
-    else:
-        args.model_dir = f"train-{args.train_dataset}_aug-{args.aug_dataset}"
 
     main(args)

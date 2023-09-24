@@ -1,75 +1,90 @@
-import os
-import numpy as np
 import torch
 from PIL import Image
-from detector.transforms import Compose
+import json
+from torchvision import transforms
+import albumentations as A
+import numpy as np
+from tqdm import tqdm
 
-from config import RENDERS_PATH, MASKS_PATH, DATASET_PATH, OBJECT_PATH
-
+from config import DATASET_PATH
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self, train_dataset: str, transforms: Compose = None):
-        self.object_names = sorted(os.listdir(DATASET_PATH(train_dataset)))
-        self.transforms = transforms
-        # load all image files, sorting them to
-        # ensure that they are aligned
-        self.imgs = []
-        self.masks = []
+    def __init__(self, train_dataset: str):
+        self.transforms = A.Compose(
+            [
+                A.Flip(p=0.5),
+                A.Blur(blur_limit=(3,5), p=0.5),
+                A.CLAHE(clip_limit=(1,2), p=0.125),
+                A.Downscale(scale_min=0.5, scale_max=0.99, interpolation=1, p=0.125),
+                A.ISONoise(color_shift=(0,0.2), intensity=(0.1,1), p=0.25),
+                A.RandomBrightnessContrast(brightness_limit=(-0.1,0.25), contrast_limit=(-0.1,0.25), p=0.5),
+            ],
+            bbox_params=A.BboxParams(format="pascal_voc"),
+            p=0.8
+        )
+
+        self.imgs_path = []
+        self.masks_path = []
         self.labels = []
-        for object_name in self.object_names:
-            if RENDERS_PATH(train_dataset, object_name).is_dir() and MASKS_PATH(
-                train_dataset, object_name
-            ):
-                imgs = list(sorted(RENDERS_PATH(train_dataset, object_name).iterdir()))
-                masks = list(sorted(MASKS_PATH(train_dataset, object_name).iterdir()))
-                assert len(imgs) == len(
-                    masks
-                ), "Number of masks is not the same as number of renders."
-                self.imgs += imgs
-                self.masks += masks
-                self.labels += [object_name for _ in range(len(imgs))]
-            else:
-                print(
-                    f"WARNING: Object {object_name} does not have any renders or masks in {OBJECT_PATH(train_dataset, object_name)} and will be excluded during training"
-                )
+        self.bboxes = []
+        self.area = []
+
+        for scene in tqdm(list((DATASET_PATH(train_dataset) / "train_pbr").iterdir())):
+            with open(scene / "scene_gt.json", "r") as f:
+                scene_gt = json.load(f)
+            with open(scene / "scene_gt_info.json", "r") as f:
+                scene_gt_info = json.load(f)
+
+            for view in range(len(scene_gt)):
+                labels = []
+                bboxes = []
+                masks_path = []
+                area = []
+                for obj in range(len(scene_gt[str(view)])):
+                    if scene_gt_info[str(view)][obj]["px_count_visib"] > 300:
+                        labels.append(scene_gt[str(view)][obj]["obj_id"])
+                        bbox = scene_gt_info[str(view)][obj]["bbox_visib"]
+                        bbox = [bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]]
+                        bboxes.append(bbox)
+                        area.append(scene_gt_info[str(view)][obj]["px_count_visib"])
+                        masks_path.append(
+                            scene / "mask_visib" / f"{view:06d}_{obj:06d}.png"
+                        )
+                if labels != []:
+                    self.labels.append(labels)
+                    self.bboxes.append(bboxes)
+                    self.masks_path.append(masks_path)
+                    self.area.append(area)
+                    self.imgs_path.append(scene / "rgb" / f"{view:06d}.jpg")
 
     def __getitem__(self, idx):
         # load images and masks
-        img_path = self.imgs[idx]
-        mask_path = self.masks[idx]
-        curr_obj_name = self.labels[idx]
-
-        img = Image.open(img_path).convert("RGB")
+        img = Image.open(self.imgs_path[idx]).convert("RGB")
         img = np.array(img)
 
-        mask = Image.open(mask_path)
-        mask = np.array(mask)
+        masks = []
+        for i in range(len(self.masks_path[idx])):
+            masks.append(np.array(Image.open(self.masks_path[idx][i])))
+
+        labels = self.labels[idx]
+        bboxes = self.bboxes[idx]
+        area = self.area[idx]
 
         if self.transforms is not None:
-            img, masks, labels = self.transforms(img, mask, curr_obj_name)
+            transformed = self.transforms(image=img, masks=masks, bboxes=[bboxes[i]+[labels[i]] for i in range(len(bboxes))])
+            img = transformed["image"]
+            masks = np.array(transformed["masks"])//255
+            bboxes = np.array(transformed["bboxes"])[:,0:4]
 
-        num_objs = len(labels)
-        boxes = []
-        for i in range(num_objs):
-            pos = np.nonzero(masks[i])
-            xmin = np.min(pos[1])
-            xmax = np.max(pos[1])
-            ymin = np.min(pos[0])
-            ymax = np.max(pos[0])
-            boxes.append([xmin, ymin, xmax, ymax])
-
-            labels[i] = self.object_names.index(labels[i]) + 1
-
-        boxes = torch.as_tensor(boxes, dtype=torch.float32)
+        img = transforms.ToTensor()(img)
+        bboxes = torch.as_tensor(bboxes, dtype=torch.float32)
         labels = torch.as_tensor(labels, dtype=torch.int64)
         masks = torch.as_tensor(masks, dtype=torch.uint8)
-
         image_id = torch.tensor([idx])
-        area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
-        iscrowd = torch.zeros((num_objs,), dtype=torch.int64)
+        iscrowd = torch.zeros((len(labels),), dtype=torch.int64)
 
         target = {}
-        target["boxes"] = boxes
+        target["boxes"] = bboxes
         target["labels"] = labels
         target["masks"] = masks
         target["image_id"] = image_id
@@ -79,4 +94,4 @@ class Dataset(torch.utils.data.Dataset):
         return img, target
 
     def __len__(self):
-        return len(self.imgs)
+        return len(self.imgs_path)

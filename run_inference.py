@@ -3,12 +3,10 @@ from torchvision import transforms
 from PIL import Image, ImageDraw
 import numpy as np
 import argparse
-import torch
-import os
-from typing import Union, Tuple
+from typing import Tuple
 from detector.run_detector_training import MaskRCNN
 
-from config import MODEL_PATH, DATASET_PATH
+from config import MODEL_PATH, LABELS_PATH
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
@@ -16,11 +14,10 @@ device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 def get_bounding_boxes(
     img: np.ndarray,
     model: torch.nn.Module,
-    str_labels: list[str] = ["0", "1"],
+    str_labels: dict = None,
     device: torch.device = torch.device("cpu"),
     min_score: float = 0.75,
 ) -> Tuple[list[list], list[str], list[float]]:
-    
     model.to(device)
     """
     img = (img.transpose([2,0,1])/255)[None]
@@ -43,7 +40,10 @@ def get_bounding_boxes(
     print(f"Other scores are: {scores}.")
 
     for i in range(len(labels)):
-        labels[i] = str_labels[labels[i] - 1]
+        if str_labels != None:
+            labels[i] = str_labels[labels[i]]
+        else:
+            labels[i] = str(labels[i])
         scores[i] = round(scores[i], 3)
 
     best_boxes = []
@@ -96,6 +96,16 @@ def get_bounding_boxes(
 
 
 def main(args: argparse.ArgumentParser) -> None:
+    if LABELS_PATH(args.train_dataset).is_file():
+        str_labels = {}
+        with open(LABELS_PATH(args.train_dataset), "r") as f:
+            data = f.readlines()
+            for line in data:
+                l = line.split(":")
+                str_labels[int(l[0])] = l[1].strip("\n")
+    else:
+        str_labels = None
+
     if args.experiment == "":
         ckpt_path = MODEL_PATH(args.model_dir) / "model.ckpt"
     else:
@@ -104,16 +114,18 @@ def main(args: argparse.ArgumentParser) -> None:
     model = MaskRCNN.load_from_checkpoint(ckpt_path)
     model.eval()
 
-    str_labels = sorted(os.listdir(DATASET_PATH(args.train_dataset)))
-
     transform = transforms.Compose([transforms.PILToTensor()])
 
-    test_imgs = [im.name for im in list(MODEL_PATH(args.model_dir).iterdir()) if (im.suffix == ".png" and im.name[0:4] == "test")]
+    test_imgs = [
+        im.name
+        for im in list(MODEL_PATH(args.model_dir).iterdir())
+        if (im.suffix == ".png" and im.name[0:4] == "test")
+    ]
     test_imgs.sort(key=lambda x: int(x.split(".")[0][4:]))
 
-    for img_idx in range(1, len(test_imgs)+1):
+    for img_idx in range(1, len(test_imgs) + 1):
         print(f"\nImage {img_idx}")
-        image_path = MODEL_PATH(args.model_dir) / test_imgs[img_idx-1]
+        image_path = MODEL_PATH(args.model_dir) / test_imgs[img_idx - 1]
         result_path = MODEL_PATH(args.model_dir)
 
         with open(image_path, "rb") as f:
@@ -146,7 +158,10 @@ def main(args: argparse.ArgumentParser) -> None:
             box[3] = np.clip(box[3] + dh, 0, img.shape[-2] - 1)
 
         for i in range(len(labels)):
-            labels[i] = str_labels[labels[i] - 1]
+            if str_labels != None:
+                labels[i] = str_labels[labels[i]]
+            else:
+                labels[i] = str(labels[i])
             scores[i] = round(scores[i], 3)
 
         # ALL SAVE
@@ -230,13 +245,10 @@ def main(args: argparse.ArgumentParser) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("train_dataset", type=str, nargs="?", default="ycbv")
-    parser.add_argument("--aug_dataset", type=str, nargs="?", default=None)
-    parser.add_argument("--min_score", type=float, nargs="?", default=0.75)
-    parser.add_argument("--experiment", "-e", type=str, default="test_21x1000_renders-uncut_const-as-before")
+    parser.add_argument("--min-score", type=float, nargs="?", default=0.75)
+    parser.add_argument("--experiment", "-e", type=str, default="test_4")
     args = parser.parse_args()
 
-    if args.aug_dataset == None:
-        args.model_dir = f"train-{args.train_dataset}"
-    else:
-        args.model_dir = f"train-{args.train_dataset}_aug-{args.aug_dataset}"
+    args.model_dir = f"train-{args.train_dataset}"
+
     main(args)

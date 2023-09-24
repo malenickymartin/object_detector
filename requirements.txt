@@ -1,2 +1,9 @@
 lightning
+albumentations
 torchvision==0.15.1
+git+https://github.com/DLR-RM/BlenderProc.git@51e5d2541fbd0abea8ca0398021c08da5816afeb
+torch
+torchvision
+PIL
+numpy
+tqdm
